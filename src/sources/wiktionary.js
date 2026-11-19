@@ -37,6 +37,13 @@ const SIGNS = {
   ...Object.fromEntries(['ar', 'arz', 'ary', 'apc', 'fa', 'prs', 'ur', 'ps', 'ckb', 'ug'].map((c) => [c, ARABIC_SIGNS])),
   he: HEBREW_SIGNS, yi: HEBREW_SIGNS,
 };
+// a word as it is written, without the stress and tone marks dictionaries add (до́ма → дома, kȕća → kuća); Latin
+// keeps its macrons, which learners' books print
+export function unmarked(s, lang = '') {
+  const marks = lang !== 'la' && VOWEL_MARKS[lang];
+  if (!marks) return String(s || '');
+  return String(s || '').normalize('NFD').replace(new RegExp(`([aeiouyrаеёиоуыэюяіїєѣ])(?:${marks.source})+`, 'giu'), '$1').normalize('NFC');
+}
 export function plain(s, lang = '') {
   let x = String(s || '').normalize('NFD').replace(/\p{Cf}/gu, '');
   const marks = VOWEL_MARKS[lang];

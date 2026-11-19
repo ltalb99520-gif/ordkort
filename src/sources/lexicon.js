@@ -5,7 +5,7 @@
    Not every deploy has it (it is made before a deploy, not kept in git) and not every language is in it: then
    `entry` answers undefined and the checks ask Wikimedia as before. null means the language is there and the word is
    not: Wiktionary has no such word (as of the lexicon's date). */
-import { plain } from './wiktionary.js';
+import { plain, unmarked } from './wiktionary.js';
 
 // Wiktionary's codes where they differ from ours (as in scripts/lexicon.mjs)
 const WIKT = { sr: 'sh', hr: 'sh', bs: 'sh', prs: 'fa' };
@@ -101,6 +101,29 @@ export async function english(env, lang, word, pos) {
   return out;
 }
 
+/* What the lexicon says about words, one short line each, as ground for the AI: "blynedd - noun (f); blynedd f; year
+   (count form)". Words it does not have are left out; at most `max` lines. */
+export async function facts(env, lang, words, max = 30) {
+  const out = [], seen = new Set();
+  for (const w of words) {
+    const word = String(w || '').trim();
+    if (!word || seen.has(word.toLowerCase()) || out.length >= max) continue;
+    seen.add(word.toLowerCase());
+    const list = await lookup(env, lang, word);
+    if (!list) return out; // no lexicon for the language
+    let hits = list.filter((x) => x.p && !x.of);
+    if (!hits.length) {
+      const of = list.find((x) => x.of)?.of?.[0];
+      if (of) hits = ((await lookup(env, lang, of)) || []).filter((x) => x.p && !x.of);
+    }
+    for (const x of hits.slice(0, 2)) {
+      const forms = x.h ? '' : (x.f || []).slice(0, 4).join(', ');
+      out.push(`${x.w} - ${x.p}${x.g ? ` (${x.g})` : ''}${x.h ? `; ${x.h}` : ''}${forms ? `; forms: ${forms}` : ''}${x.s?.length ? `; ${x.s.slice(0, 2).join('; ')}` : ''}`);
+    }
+  }
+  return out;
+}
+
 // the words that carry the meaning of English glosses and translations: "to eat (food)" → eat, food
 const STOP = new Set(['to', 'a', 'an', 'the', 'of', 'be', 'one', 'someone', 'something', 'somebody', 'oneself', 'in', 'on', 'at',
   'for', 'with', 'by', 'or', 'and', 'as', 'from', 'that', 'which', 'who', 'some', 'any', 'very', 'its', 'it', 'is', 'are', 'not',
@@ -113,6 +136,23 @@ export function meaningWords(texts) {
       out.add(w);
       // plurals and verb forms of glosses: "eats", "cats" → eat, cat
       if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) out.add(w.slice(0, -1));
+    }
+  }
+  return out;
+}
+
+/* Words of a language for English words, from the translation tables of English entries ("water" -> se čáhci):
+   [{ word, en }], or undefined without a lexicon of English */
+export async function fromEnglish(env, lang, words) {
+  const code = codeOf(lang), out = [], seen = new Set();
+  for (const en of words) {
+    const list = await lookup(env, 'en', en);
+    if (!list) return undefined;
+    for (const x of list) {
+      for (const t of x.tr?.[code] || []) {
+        const w = unmarked(t, lang);
+        if (!seen.has(w)) { seen.add(w); out.push({ word: w, en }); }
+      }
     }
   }
   return out;

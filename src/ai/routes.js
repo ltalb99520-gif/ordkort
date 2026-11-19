@@ -49,8 +49,9 @@ function once(k, fn) {
 // was made (a failed try, and the Retry after it, cost nothing)
 const FRESH_PER_DAY = 20;
 // `retry`: an answer that is worth asking for once more (the second is taken only if it is better, and costs the
-// person nothing extra); `served`: what is done to every answer before it is shown, a saved one too
-async function generate(env, key, cacheKey, { fresh, prompt, clean, keep = () => true, retry = () => false, served = (x) => x }) {
+// person nothing extra); `served`: what is done to every answer before it is shown, a saved one too; `checked`: what is
+// done once to a new answer before it is saved (a look in the dictionaries, a repair of what they contradict)
+async function generate(env, key, cacheKey, { fresh, prompt, clean, keep = () => true, retry = () => false, served = (x) => x, checked = async (x) => x }) {
   const fk = `fresh:${key}:${today()}`;
   if (fresh && (await peek(env.DB, fk)) >= FRESH_PER_DAY) throw new HttpError(429, 'slow_down');
   if (!fresh) {
@@ -66,6 +67,7 @@ async function generate(env, key, cacheKey, { fresh, prompt, clean, keep = () =>
         const next = await groq(env, p).then(clean, () => null);
         if (next && !retry(next)) out = next;
       }
+      if (out) out = await checked(out).catch((e) => { console.log('check failed:', e.message); return out; });
       out = out && served(out);
       if (!out) throw new HttpError(502, 'bad_ai');
       if (keep(out)) await cacheSet(env.DB, cacheKey, out);
@@ -104,9 +106,10 @@ export async function words(request, env, key) {
   const quota = await takeAI(env, key);
   try {
     const avoid = [...new Set([...bank.map((r) => r.norm), ...[...have].filter(wordLike)])].slice(-220);
+    const dict = tp && !phrases ? await dictionaryWords(env, target, tp, level, n, new Set([...have, ...bank.map((r) => r.norm)])).catch(() => []) : [];
     const raw = await groq(env, phrases
       ? P.phrasesPrompt({ target, native, topic: custom, level, n, avoid })
-      : P.wordsPrompt({ target, native, topic: tp ? tp.en : custom, hint: tp?.hint, only: tp?.pos, level, n, avoid }));
+      : P.wordsPrompt({ target, native, topic: tp ? tp.en : custom, hint: tp?.hint, only: tp?.pos, level, n, avoid, dict }));
     const seen = new Set([...have, ...bank.map((r) => r.norm)]);
     const fresh = [];
     for (const w of arr(raw.words, 40).map((x) => P.aiWord(x, target))) {
@@ -131,6 +134,21 @@ export async function words(request, env, key) {
     await quota.refund();
     throw e;
   }
+}
+
+/* For a language the AI knows little (not WELL_KNOWN), the words of a topic come from the dictionary: the English words
+   of the same topic in the bank ("the water", "to eat") lead through the translation tables of English Wiktionary to
+   real words of the language ("čáhci", "borrat"), and the AI chooses among them instead of making words up. [] when
+   there are too few (then it writes the words as before, and the checks mark what no dictionary has). */
+async function dictionaryWords(env, target, tp, level, n, known) {
+  if (WELL_KNOWN.includes(target) || target === 'en') return [];
+  const rows = (await env.DB.prepare('SELECT data FROM words WHERE grp LIKE ? ORDER BY id LIMIT 300').bind(`en:%:${tp.id}:${level}`).all()).results || [];
+  const english = [...new Set(rows.map((r) => { try { return JSON.parse(r.data).term; } catch { return ''; } })
+    .map((t) => String(t).trim().replace(/^(the|a|an|to)\s+/i, '')).filter((t) => t && !/\s/.test(t)))].slice(0, 80);
+  if (english.length < n / 2) return [];
+  const found = (await L.fromEnglish(env, target, english)) || [];
+  const fresh = found.filter((d) => !known.has(norm(d.word)) && d.word.split(' ').length <= 3);
+  return fresh.length >= n / 2 ? fresh.slice(0, n * 2) : [];
 }
 
 /* Nouns and verbs are checked against a dictionary once — the official one (ordbokene.no) for Norwegian,
@@ -368,10 +386,19 @@ export async function lookup(request, env, key) {
     fresh: !!b.fresh,
     prompt: async () => ({ ...P.lookupPrompt({ target, native, q, ...(await groundFor(env, target, q)) }) }),
     clean: P.cleanEntry,
+    checked: (e) => realWords(env, target, e),
     keep: (e) => e.found !== false,
     retry: (e) => !P.isNative(e, native, target),
     served: (e) => P.inNative(e, native, target),
   });
+}
+
+/* An entry without the compounds, synonyms and antonyms the lexicon has never heard of ("blyneddol" for Welsh
+   blynedd): the AI invents them more than anything else, and a learner would take them for words */
+async function realWords(env, target, e) {
+  if (!e || e.found === false) return e;
+  const real = async (list) => (await Promise.all(list.map(async (w) => ((/\s/.test(w) || (await L.knows(env, target, w)) !== false) ? w : null)))).filter(Boolean);
+  return { ...e, compounds: await real(e.compounds || []), synonyms: await real(e.synonyms || []), antonyms: await real(e.antonyms || []) };
 }
 
 const inTime = (p) => Promise.race([p, new Promise((res) => setTimeout(() => res(null), 4000))]);
@@ -382,7 +409,8 @@ async function groundFor(env, target, q) {
       inTime(W.lookup(cache, target, q, { budget: { left: 3 }, signal })).catch(() => null),
       inTime(D.lookup(cache, target, q, { budget: { left: 4 }, signal })).catch(() => null),
     ]);
-    return { ground: [W.summary(r), D.summary(more || [])].filter(Boolean).join('\n'), source: 'wiktionary' };
+    const lex = await L.facts(env, target, [q]).catch(() => []);
+    return { ground: [W.summary(r), D.summary(more || []), lex.length ? `Lexicon (Wiktionary data):\n${lex.join('\n')}` : ''].filter(Boolean).join('\n'), source: 'wiktionary' };
   }
   return { ground: await officialSummary(env, target, q), source: 'official' };
 }
@@ -466,7 +494,25 @@ export async function translate(request, env, key) {
     fresh: false,
     prompt: () => P.translatePrompt({ target, native, from, to, text }),
     clean: P.cleanTranslation,
+    checked: (r) => checkTranslation(env, target, native, r),
   });
+}
+
+/* The text in the language being learnt, checked against the dictionary once: the lexicon's headword lines of its
+   words ("blynedd f", "tri m (feminine tair)") go to the AI with the analysis, and what they contradict is repaired:
+   the sentence itself and the tokens whose form or explanation was wrong ("am dri blynedd" -> "am dair blynedd": the
+   year is feminine). Only for the languages the AI knows less well (WELL_KNOWN are the rest), with one small extra
+   request, and the answer is saved, so a text is checked once for everybody. */
+const WELL_KNOWN = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'uk', 'pl', 'nl', 'sv', 'da', 'nb', 'nn', 'zh', 'ja', 'ko'];
+async function checkTranslation(env, target, native, r) {
+  if (WELL_KNOWN.includes(target) || !r?.tokens?.length) return r;
+  const facts = await L.facts(env, target, r.tokens.flatMap((x) => [x.t, x.lemma])).catch(() => []);
+  if (!facts.length) return r;
+  const text = r.analyzed === 'source' ? null : r.translation;
+  const fix = P.cleanFix(await groq(env, P.checkPrompt({ target, native, text: text || r.tokens.map((x) => x.t).join(' '), tokens: r.tokens, facts, fixText: !!text })));
+  if (!fix) return r;
+  const tokens = r.tokens.map((x, i) => (fix.tokens[i] ? { ...x, ...fix.tokens[i] } : x));
+  return { ...r, ...(text && fix.translation ? { translation: fix.translation } : {}), tokens };
 }
 
 /* ---------- interface translation into a language without a hand-made one ---------- */

@@ -168,3 +168,21 @@ test('a translation is compared with what the word means: "mánnu" is the moon, 
     assert.equal(api.verified(by.mánnu), false);
   } finally { globalThis.fetch = real; }
 });
+
+test('a topic’s words in a language the AI knows little come from the dictionary: English words of the topic lead to real ones', async () => {
+  L.forget();
+  const env = assets();
+  // English entries keep their translations (scripts/lexicon.mjs split): tr: { se: ["čáhci"] }
+  const water = { ...compact({ pos: 'noun', word: 'water', lang_code: 'en', senses: [{ glosses: ['a liquid'] }] }), tr: { se: ['čáhci'], ru: ['вода́'] } };
+  const { shards } = build([water], 'en');
+  const files = new Map(shards.map((s, i) => [`/lex/en/${i}.json`, JSON.stringify(s)]));
+  files.set('/lex/en/meta.json', JSON.stringify({ n: shards.length }));
+  const inner = env.ASSETS.fetch;
+  env.ASSETS.fetch = async (req) => { const p = new URL(req.url).pathname; return files.has(p) ? new Response(files.get(p)) : inner(req); };
+  assert.deepEqual(await L.fromEnglish(env, 'se', ['water', 'fire']), [{ word: 'čáhci', en: 'water' }]);
+  assert.deepEqual(await L.fromEnglish(env, 'ru', ['water']), [{ word: 'вода', en: 'water' }], 'without the stress mark dictionaries add');
+  const { wordsPrompt } = await import('../src/ai/prompts.js');
+  const p = wordsPrompt({ target: 'se', native: 'ru', topic: 'Food', level: 'A1', n: 5, avoid: [], dict: [{ word: 'čáhci', en: 'water' }] });
+  assert.match(p.user, /ONLY from this list of real Northern Sámi words.*čáhci = water/s);
+  assert.doesNotMatch(wordsPrompt({ target: 'se', native: 'ru', topic: 'Food', level: 'A1', n: 5, avoid: [] }).user, /ONLY from this list/);
+});

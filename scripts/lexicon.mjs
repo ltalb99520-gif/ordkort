@@ -45,7 +45,7 @@ const POS = {
 const GENDERS = { masculine: 'm', feminine: 'f', neuter: 'n', common: 'c' };
 // forms that are notes of the extractor, not words
 const JUNK = new Set(['table-tags', 'inflection-template', 'class', 'error-unrecognized-form', 'romanization', 'transliteration']);
-const MAX_FORMS = 48, MAX_GLOSSES = 3, GLOSS = 90, HEAD = 120, MAX_ENGLISH = 12;
+const MAX_FORMS = 48, MAX_GLOSSES = 3, GLOSS = 90, HEAD = 120, MAX_ENGLISH = 12, MAX_TRANSLATIONS = 3;
 
 /* One wiktextract entry → a compact one, or null for what a learner's card never is (letters, affixes, names) */
 export function compact(e) {
@@ -126,9 +126,16 @@ async function split(files, wanted) {
         if (!outs.has(lang)) outs.set(lang, createWriteStream(join(tmp, lang + '.jsonl')));
         outs.get(lang).write(JSON.stringify(x) + '\n');
       };
-      if (code === 'en') for (const [lang, x] of translations(e, wanted)) put(lang, x);
+      const tables = code === 'en' ? translations(e, wanted) : [];
+      for (const [lang, x] of tables) put(lang, x);
       const c = compact(e);
       if (!c) continue;
+      // an English word keeps its translations too (tr: { se: ["čáhci"], kl: ["imeq"] }), the words a topic's
+      // list can be made of in a language the AI knows little (src/ai/routes.js dictionaryWords)
+      if (tables.length && !c.of) {
+        c.tr = {};
+        for (const [lang, x] of tables) if ((c.tr[lang] ||= []).length < MAX_TRANSLATIONS) c.tr[lang].push(x.t);
+      }
       put(code, c);
       kept++;
     }
@@ -161,6 +168,7 @@ export function build(entries, code) {
     if (e.f) had.f = [...new Set([...(had.f || []), ...e.f])].slice(0, MAX_FORMS);
     if (e.s) had.s = [...new Set([...(had.s || []), ...e.s])].slice(0, MAX_GLOSSES + 1);
     had.h ||= e.h; had.i ||= e.i;
+    if (e.tr) for (const [lang, list] of Object.entries(e.tr)) had.tr = { ...had.tr, [lang]: [...new Set([...(had.tr?.[lang] || []), ...list])].slice(0, MAX_TRANSLATIONS) };
   }
   for (const e of words.values()) add(plain(e.w, code), e);
   for (const ptr of pointers) {
