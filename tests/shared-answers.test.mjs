@@ -101,3 +101,38 @@ test('a new entry whose note came in the language being learnt is asked for once
     assert.equal(asked, 1, 'a note in Russian is not asked for again');
   } finally { globalThis.fetch = real; }
 });
+
+test('a chapter with the model’s thinking or stray letters in it is asked for once more, and the better one is served', async () => {
+  const env = { DB, GROQ_API_KEY: 'k', GROQ_MODELS: 'z2' };
+  const ch = (extra) => ({ title: 'Nouns', intro: 'Georgian nouns have seven cases.', sections: [{ heading: 'Cases', text: 'The ergative ends in -მა.', table: null,
+    examples: [{ text: 'კაცმა წერილი დაწერა.', tr: 'The man wrote a letter.', note: '' }, ...extra], tip: '' }], mistakes: [], practice: [] });
+  const answers = [
+    ch([{ text: 'კატის სახლი დიდი आहे', tr: 'x', note: '' }, { text: 'Wait, let’s verify the ending.', tr: '', note: '' }]),
+    ch([]),
+  ];
+  const real = globalThis.fetch;
+  let asked = 0;
+  globalThis.fetch = async () => { asked++; return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(answers.shift()) } }] }), { status: 200 }); };
+  try {
+    const out = await (await api.chapter(req({ target: 'ka', native: 'en', id: 'nouns' }), env, 'nino.home')).json();
+    assert.equal(asked, 2);
+    assert.deepEqual(out.sections[0].examples.map((x) => x.text), ['კაცმა წერილი დაწერა.']);
+  } finally { globalThis.fetch = real; }
+});
+
+test('a cut-off list of words goes to the person who asked, not into the shared bank', async () => {
+  const env = { DB, GROQ_API_KEY: 'k', GROQ_MODELS: 'z3' };
+  const topic = App.topics.list[0].id;
+  const word = (i) => ({ term: `ord${'abcdefghij'[i]}`, tr: `слово ${i}`, pos: 'adjective', gram: '', forms: '', pron: '', ex: '', ex_tr: '' });
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (!String(url).includes('groq')) throw new TypeError('offline');
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ words: [0, 1, 2, 3, 4].map(word) }) } }] }), { status: 200 });
+  };
+  try {
+    const out = await (await api.words(req({ target: 'kl', native: 'ru', topic, level: 'A1', n: 20 }), env, 'aqqa.home')).json();
+    assert.equal(out.words.length, 5);
+    const row = await env.DB.prepare('SELECT count(*) AS n FROM words WHERE grp LIKE ?').bind(`kl:ru:${topic}:%`).first();
+    assert.equal(row.n, 0, '5 of 20: not shared');
+  } finally { globalThis.fetch = real; }
+});

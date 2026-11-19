@@ -9,6 +9,7 @@ import { HttpError, json, readJSON, str, arr, int, sha256, norm, today } from '.
 import * as P from './prompts.js';
 import * as W from '../sources/wiktionary.js';
 import * as D from '../sources/dicts.js';
+import * as L from '../sources/lexicon.js';
 
 const BUILT_IN_UI = ['en', 'ru', 'uk', 'nb', 'nn', 'ar', 'zh'];
 const UI_CHUNK = 90;
@@ -119,8 +120,9 @@ export async function words(request, env, key) {
     const checked = await checkWords(env, target, [...fresh.map((f) => f.w), ...served]);
     await saveChecked(env, grp, checked.filter((w) => served.includes(w)));
     // into the bank in one statement (up to 30 rows × 3 parameters ≤ 100 D1 parameters)
-    for (let i = 0; i < fresh.length; i += 30) {
-      const part = fresh.slice(i, i + 30);
+    const shared = bankable(fresh.map((f) => f.w), n) ? fresh : [];
+    for (let i = 0; i < shared.length; i += 30) {
+      const part = shared.slice(i, i + 30);
       await env.DB.prepare(`INSERT OR IGNORE INTO words (grp, norm, data) VALUES ${part.map(() => '(?, ?, ?)').join(', ')}`)
         .bind(...part.flatMap(({ k, w }) => [grp, k, JSON.stringify(w)])).run();
     }
@@ -134,18 +136,35 @@ export async function words(request, env, key) {
 /* Nouns and verbs are checked against a dictionary once — the official one (ordbokene.no) for Norwegian,
    Wiktionary for other languages: a wrong article ("et ingrediens", "die Hund") or forms that do not exist are
    fixed, in the bank for everyone, and `chk` marks the word as checked; `g` is a gender Wiktionary confirmed
-   for a noun whose term does not show it ("книга", "l’école"). A Worker may make only 50 requests to other sites
+   for a noun whose term does not show it ("книга", "l’école"); `nf` marks a word no dictionary has — it may be
+   invented, so it is never called checked (see `verified`). A Worker may make only 50 requests to other sites
    and the AI call may need up to 8, so this check makes at most 30 and leaves the rest for the next time. */
 const checkable = (target) => App.ordbok.supports(target) || W.supports(target);
+// a common-gender word ("en" in Swedish) is masculine or feminine in a dictionary that tells them apart
+const sameGender = (a, b) => a === b || (a === 'c' && 'mf'.includes(b)) || (b === 'c' && 'mf'.includes(a));
+// a word a dictionary has confirmed (not one it could not find)
+export const verified = (w) => !!w.chk && !w.nf;
+/* Whether new words are good enough for the shared bank, where everybody gets them: not a cut-off answer (fewer than
+   half the words asked for), and not one where most of the words a dictionary could judge are words it does not have
+   — in such an answer the rest is hardly better. They still go to the person who asked. */
+export function bankable(words, n) {
+  if (words.length < Math.ceil(n / 2)) return false;
+  const judged = words.filter((w) => w.chk);
+  return judged.length < 4 || judged.filter((w) => w.nf).length * 2 <= judged.length;
+}
 async function checkWords(env, target, words) {
-  if (!checkable(target)) return [];
+  const full = checkable(target);
   const official = App.ordbok.supports(target);
+  // every other single word (an adjective, an adverb; any word of a language the full check skips) is looked up in
+  // the lexicon: there or not, without a request to another site
+  const done = await knownWords(env, target, words.filter((w) => !w.chk && (!full || (w.pos !== 'noun' && w.pos !== 'verb'))));
+  if (!full) return done;
   const cache = cacheOf(env);
+  const lex = (lemma, pos) => L.entry(env, target, lemma, pos);
   const todo = words.filter((w) => !w.chk && (w.pos === 'noun' || w.pos === 'verb'));
   const budget = { left: 30 };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 6000);
-  const done = [];
   let i = 0;
   await Promise.all(Array.from({ length: 4 }, async () => {
     while (i < todo.length && budget.left > 5) {
@@ -153,15 +172,36 @@ async function checkWords(env, target, words) {
       try {
         const opts = { signal: ctrl.signal, budget };
         const r = official ? await App.ordbok.verify(w, target, opts)
-          : await W.check(cache, target, w, { ...opts, more: (lemma, pos) => D.entry(cache, target, lemma, pos, opts) });
-        if (r && r.term !== w.term) w.gram = ''; // a gender label written for the wrong article
-        if (r) { w.term = r.term; w.forms = r.forms; if (r.g) w.g = r.g; }
+          : await W.check(cache, target, w, { ...opts, lex, more: (lemma, pos) => D.entry(cache, target, lemma, pos, opts) });
+        if (r?.none) w.nf = 1;
+        else if (r) {
+          // a gender label written for the wrong article, or for another gender than the dictionary's
+          if (r.term !== w.term || (r.g && w.ag && !sameGender(w.ag, r.g))) w.gram = '';
+          w.term = r.term; w.forms = r.forms;
+          if (r.g) w.g = r.g;
+          delete w.nf;
+        }
         w.chk = 1;
         done.push(w);
       } catch { /* timeout, budget or network: another time */ }
     }
   }));
   clearTimeout(timer);
+  return done;
+}
+const SKIP_POS = ['phrase', 'noun', 'verb'];
+async function knownWords(env, target, words) {
+  const done = [];
+  for (const w of words) {
+    const t = w.term.trim();
+    if (w.pos === 'phrase' || /\s/.test(t) || (SKIP_POS.includes(w.pos) && checkable(target))) continue;
+    const known = await L.knows(env, target, t).catch(() => undefined);
+    if (known === undefined) return done; // no lexicon for the language: none of them can be looked up
+    if (!known) w.nf = 1;
+    else delete w.nf;
+    w.chk = 1;
+    done.push(w);
+  }
   return done;
 }
 async function saveChecked(env, grp, words) {
@@ -179,7 +219,8 @@ export async function check(request, env, key) {
   const words = arr(b.words, 10).map((w) => ({ term: str(w?.term, 80), pos: str(w?.pos, 20), forms: str(w?.forms, 200) }));
   await checkWords(env, target, words.filter((w) => w.term));
   // null: not checked this time (a timeout or the budget) — the browser asks again later
-  return json({ words: words.map((w) => (w.chk ? { term: w.term, forms: w.forms, g: w.g || '' } : null)) });
+  // nf: no dictionary has the word (it may be invented)
+  return json({ words: words.map((w) => (w.chk ? { term: w.term, forms: w.forms, g: w.g || '', ...(w.nf ? { nf: 1 } : {}) } : null)) });
 }
 
 /* ---------- card autofill (personal, not cached) ---------- */
@@ -341,6 +382,9 @@ export async function wikt(request, env, key) {
 }
 
 /* ---------- textbook chapter ---------- */
+// a chapter that lost several pieces to the checks of cleanChapter (the model's thinking, stray letters, a "mistake"
+// that is no mistake) is asked for once more; the second is taken only if it is better
+const tooMuchLeftOut = (ch) => ch.dropped >= 2;
 export async function chapter(request, env, key) {
   const b = await readJSON(request, 2000);
   const { target, native } = pairOf(b);
@@ -348,7 +392,8 @@ export async function chapter(request, env, key) {
   return generate(env, key, await KEYS.chapter(target, native, b), {
     fresh: !!b.fresh,
     prompt: () => P.chapterPrompt({ target, native, id: b.id }),
-    clean: P.cleanChapter,
+    clean: (r) => P.cleanChapter(r, target, native),
+    retry: tooMuchLeftOut,
   });
 }
 
@@ -361,7 +406,8 @@ export async function ask(request, env, key) {
   return generate(env, key, await KEYS.ask(target, native, b), {
     fresh: !!b.fresh,
     prompt: () => P.askPrompt({ target, native, q }),
-    clean: P.cleanChapter,
+    clean: (r) => P.cleanChapter(r, target, native),
+    retry: tooMuchLeftOut,
   });
 }
 

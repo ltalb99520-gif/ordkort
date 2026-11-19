@@ -141,7 +141,7 @@ test('a card Wiktionary cannot check is checked against the free dictionaries: "
     const r = await check(w.cache, 'de', { term: 'die Hund', pos: 'noun', forms: 'Hundes, Hunde, Hündin' }, { more });
     assert.equal(r.term, 'der Hund');
     assert.equal(r.forms, 'Hundes, Hunde', 'a form neither dictionary knows goes, once they know enough of them');
-    assert.equal(await check(w.cache, 'de', { term: 'die Hund', pos: 'noun' }), null, 'without them Wiktionary alone cannot tell');
-    assert.equal(await check(w.cache, 'de', { term: 'der Quatsch', pos: 'noun' }, { more }), null, 'nobody knows the word');
+    assert.deepEqual(await check(w.cache, 'de', { term: 'die Hund', pos: 'noun' }), { none: 1 }, 'without them: Wiktionary alone has no entry');
+    assert.deepEqual(await check(w.cache, 'de', { term: 'der Quatsch', pos: 'noun' }, { more }), { none: 1 }, 'nobody knows the word');
   } finally { w.restore(); }
 });

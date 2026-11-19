@@ -59,12 +59,12 @@
 
   const chapters = [
     ['sounds', 'Alphabet and pronunciation', 'alphabet/script, letters and sounds, stress, tones or intonation, reading rules'],
-    ['nouns', 'Nouns: gender, number and declension', 'grammatical gender (if any), plural formation, cases/declension (if any), definite and indefinite forms, irregular nouns'],
-    ['articles', 'Articles and determiners', 'articles, definiteness, demonstratives, quantifiers and when to use which'],
+    ['nouns', 'Nouns: gender, number and declension', 'grammatical gender (if any), plural formation, cases/declension (if any), definite and indefinite forms (if the language marks them), noun classes (if any), irregular nouns'],
+    ['articles', 'Articles and determiners', 'articles (if any — a language without them uses other means, explain those), definiteness, demonstratives, quantifiers and when to use which'],
     ['pronouns', 'Pronouns', 'personal pronouns in all forms, possessives, reflexive, demonstrative, interrogative and indefinite pronouns'],
-    ['adjectives', 'Adjectives: agreement and comparison', 'agreement in gender/number/definiteness/case, position, comparative and superlative, irregular adjectives'],
+    ['adjectives', 'Adjectives: agreement and comparison', 'agreement in whatever the language marks (gender, number, definiteness, case, noun class — or none), position, comparative and superlative, irregular adjectives'],
     ['verbs-present', 'Verbs: infinitive and present tense', 'infinitive, present tense formation, verb groups, the most common irregular and auxiliary verbs'],
-    ['verbs-past', 'Verbs: past and future', 'past tenses (simple past, perfect, pluperfect), future, how to choose between tenses, irregular past forms'],
+    ['verbs-past', 'Verbs: past and future', 'how the language expresses past and future (tenses such as simple past, perfect, pluperfect — or aspect, particles, time words), how to choose between them, irregular forms'],
     ['verbs-more', 'Modal verbs, imperative and passive', 'modal verbs, imperative, passive voice, reflexive verbs, phrasal/particle verbs, conditional'],
     ['adverbs', 'Adverbs', 'formation from adjectives, adverbs of time/place/manner/degree, position in the sentence'],
     ['prepositions', 'Prepositions', 'the most common prepositions, place vs direction, time expressions, prepositions that govern cases (if any)'],

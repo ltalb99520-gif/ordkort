@@ -31,7 +31,12 @@ const VOWEL_MARKS = {
   sr: /[̀-̄̏̑]/, hr: /[̀-̄̏̑]/, bs: /[̀-̄̏̑]/, sl: /[̀-̄̏̑]/,
   lt: /[̀́̃]/, la: /[̄̆]/,
 };
-const SIGNS = { ar: /[ً-ٰٟ]/gu, fa: /[ً-ٰٟ]/gu, prs: /[ً-ٰٟ]/gu, ur: /[ً-ٰٟ]/gu, he: /[֑-ׇ]/gu };
+const ARABIC_SIGNS = /[ً-ٰٟـ]/gu; // vowel signs and the tatweel
+const HEBREW_SIGNS = /[֑-ׇ]/gu;
+const SIGNS = {
+  ...Object.fromEntries(['ar', 'arz', 'ary', 'apc', 'fa', 'prs', 'ur', 'ps', 'ckb', 'ug'].map((c) => [c, ARABIC_SIGNS])),
+  he: HEBREW_SIGNS, yi: HEBREW_SIGNS,
+};
 export function plain(s, lang = '') {
   let x = String(s || '').normalize('NFD').replace(/\p{Cf}/gu, '');
   const marks = VOWEL_MARKS[lang];
@@ -39,6 +44,16 @@ export function plain(s, lang = '') {
   if (SIGNS[lang]) x = x.replace(SIGNS[lang], '');
   x = x.normalize('NFC').toLowerCase().trim();
   return lang === 'ru' || lang === 'be' ? x.replace(/ё/g, 'е') : x;
+}
+
+/* The title of a word's page: Wiktionary names pages by the plain spelling and shows the marks only inside them —
+   "rex" for Latin rēx, "كتاب" for كِتَاب, "ספר" for סֵפֶר, "stan" for Old English stān. Asked with the marks, the page
+   is not found and a real word looks invented. Greek and Old Norse keep theirs: they are part of the title. */
+const MACRONS = { la: /[̄̆]/gu, ang: /̄/gu };
+export function title(word, lang = '') {
+  const w = String(word || '').trim();
+  const marks = MACRONS[lang] || SIGNS[lang];
+  return marks ? w.normalize('NFD').replace(marks, '').normalize('NFC') : w;
 }
 
 export const supports = (lang) => App.langs.has(lang) && !SKIP.includes(lang);
@@ -90,7 +105,7 @@ export async function entry(cache, lang, word, pos, opts) {
   const key = `wk2:${lang}:${pos}:${plain(word, lang)}`;
   const hit = await cache.get(key, MONTH);
   if (hit) return hit.none ? null : { genders: new Set(hit.g), forms: new Set(hit.f) };
-  const html = await page(word, opts);
+  const html = await page(title(word, lang), opts);
   const e = html ? parsePage(html, lang, word, pos) : null;
   await cache.set(key, e ? { g: [...e.genders], f: [...e.forms] } : { none: 1 });
   return e;
@@ -269,7 +284,8 @@ export async function lookup(cache, lang, word, opts = {}) {
   const hit = await cache.get(key, MONTH);
   if (hit) return hit.none ? null : hit;
   const first = word[0], flipped = first === first.toLowerCase() ? first.toUpperCase() : first.toLowerCase();
-  const tries = [word, flipped === first ? '' : flipped + word.slice(1)].filter(Boolean);
+  const bare = title(word, lang);
+  const tries = [...new Set([bare, flipped === first ? '' : title(flipped + word.slice(1), lang)])].filter(Boolean);
   let out = null;
   for (let i = 0; i < tries.length && !out; i++) {
     const html = await page(tries[i], opts);
@@ -310,7 +326,7 @@ export async function recording(cache, lang, word, opts = {}) {
   const key = `wka1:${lang}:${plain(word, lang)}`;
   const hit = await cache.get(key, MONTH);
   if (hit) return hit.none ? null : hit;
-  const html = await page(word, opts);
+  const html = await page(title(word, lang), opts);
   const out = html ? audioOf(html, lang) : null;
   await cache.set(key, out || { none: 1 });
   return out;
@@ -365,8 +381,9 @@ function fits(lang, want, genders, lemma) {
    language without articles (or with an elided one, "l’école") gets its gender `g` from Wiktionary; and forms
    Wiktionary has never heard of are dropped — only when it knows the word's forms well and at least one of the
    card's forms, so a gap in its tables never wipes a card. Where Wiktionary has no entry or too few forms, the free
-   dictionaries given as opts.more add what they know. → { term, forms, g } (unchanged when all is right)
-   or null when none can tell (no entry, a phrase, a language that hardly inflects). */
+   dictionaries given as opts.more add what they know; opts.lex gives Wiktionary's data from the lexicon. → { term, forms, g } (unchanged when all is right),
+   { none: 1 } when neither has the word at all (it may be invented), or null when none can tell (a phrase, a
+   language that hardly inflects). */
 export async function check(cache, lang, { term, pos, forms }, opts) {
   if (!supports(lang) || (pos !== 'noun' && pos !== 'verb')) return null;
   const t = String(term || '').trim();
@@ -376,14 +393,17 @@ export async function check(cache, lang, { term, pos, forms }, opts) {
     : elided ? t.replace(/^l['’]\s*/i, '')
       : pos === 'verb' ? t.replace(/^(to|att|at)\s+/i, '') : t;
   if (!lemma) return null;
-  let e = await entry(cache, lang, lemma, pos, opts);
+  // the lexicon (src/sources/lexicon.js) first, as opts.lex: Wiktionary's own data without a request; null there is
+  // a word Wiktionary does not have, undefined no lexicon for the language (then the page is asked for)
+  let e = opts?.lex ? await opts.lex(lemma, pos) : undefined;
+  if (e === undefined) e = await entry(cache, lang, lemma, pos, opts);
   // where Wiktionary has no entry, or too few forms to judge them, the free dictionaries of opts.more (src/sources/
   // dicts.js) add theirs: the genders and forms either knows count
   if (opts?.more && (!e || e.forms.size < 5 || (pos === 'noun' && !e.genders.size))) {
     const m = await opts.more(lemma, pos).catch(() => null);
     if (m) e = { genders: e?.genders.size ? e.genders : m.genders, forms: new Set([...(e?.forms || []), ...m.forms]) };
   }
-  if (!e) return null;
+  if (!e) return { none: 1 };
 
   let out = t, g = '';
   const known = [...e.genders];

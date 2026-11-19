@@ -7,7 +7,7 @@
   const A = window.App;
   const { h, icon, t } = A;
   const MAX = 3000, PART = 600;
-  const NO_SPACES = ['zh', 'ja', 'th'];
+  const NO_SPACES = ['zh', 'ja', 'th', 'bo', 'my', 'km', 'lo', 'yue']; // written without spaces between words
   let R = null; // the text being read: an entry of js/readlib.js, { id, pair, text, parts: [{ text, gloss, error }], showTr, … }
   let ctrl = null;
 

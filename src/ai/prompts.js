@@ -229,7 +229,7 @@ JSON shape: {"source_lang":"","target_lang":"","translation":"","alternatives":[
 }
 
 // the distinct words of a text, lowercase, as the reader splits them (languages written without spaces have none)
-const NO_SPACES = ['zh', 'ja', 'th'];
+const NO_SPACES = ['zh', 'ja', 'th', 'bo', 'my', 'km', 'lo', 'yue']; // written without spaces between words
 export function textWords(text, lang) {
   if (NO_SPACES.includes(lang)) return [];
   return [...new Set([...String(text).matchAll(/[\p{L}\p{M}]+(?:['’-][\p{L}\p{M}]+)*/gu)].map((m) => m[0].toLowerCase()))];
@@ -311,6 +311,8 @@ export function aiWord(raw, target) {
   const want = App.langs.articleGender(target, w.term);
   const said = S(raw?.gender, 20).toLowerCase().charAt(0); // "m" or "masculine"
   if (w.pos === 'noun' && want && said && 'mfnc'.includes(said) && said !== want && !(want === 'c' && (said === 'm' || said === 'f'))) w.gram = '';
+  // the gender the AI meant, for the dictionary check to compare (routes.js): kept out of JSON, so out of the bank
+  if (w.pos === 'noun' && said && 'mfnc'.includes(said)) Object.defineProperty(w, 'ag', { value: said, enumerable: false });
   return w;
 }
 
@@ -343,17 +345,53 @@ export function inNative(e, native, target) {
 // whether all of them are in the learner's language
 export const isNative = (e, native, target) => !e || e.found === false || EXPLAINED.every((k) => App.langs.readable(e[k], native, target));
 
-export function cleanChapter(d) {
+/* What a model sometimes leaves of its own thinking in a chapter ("Wait, the plural of cù is…", "Let's find a real
+   mistake", "This is actually correct"): never part of a textbook. */
+const THINKING = /(?:^|[.!?]\s+|\()(?:Wait|Hmm|Hold on)[,.]|\bLet(?:'|’)s (?:verify|double-check|re-?check|find (?:a|another) (?:real|better|correct))\b|\bThis is actually (?:correct|right|fine)\b|\? No[,.] /;
+export const thinks = (s) => THINKING.test(String(s || ''));
+/* Letters of a script that belongs to neither language (a Marathi "आहे" in a Georgian sentence): the script of the
+   language being learnt, of the learner's language, and Latin (transliteration, grammar terms) are expected. */
+function scriptsOf(target, native) {
+  const ok = new Set(['Latin', App.langs.scriptOfLang(target), App.langs.scriptOfLang(native)]);
+  if (ok.has('Kana') || ok.has('Hangul')) ok.add('Han');
+  if (ok.has('Han') && (target === 'ja' || native === 'ja')) ok.add('Kana');
+  return ok;
+}
+// β, θ and χ are also IPA letters (/θ/ in "think"), written in any explanation of sounds
+const strays = (s, ok) => [...String(s || '')].some((ch) => { const sc = /\p{L}/u.test(ch) && !'βθχ'.includes(ch) && App.langs.scriptOf(ch); return sc && !ok.has(sc); });
+const flat = (x) => String(x || '').toLowerCase().replace(/[\s.,!?;:]+/g, ' ').trim();
+const sameText = (a, b) => flat(a) === flat(b);
+
+/* A chapter as the page shows it, without what a reader must never see: examples, mistakes and exercises with the
+   model's thinking or stray letters are left out, so are "mistakes" whose wrong and right forms are the same, and
+   sentences of the explanations with either. `dropped` (not saved: not enumerable) counts what was taken out, so
+   that a chapter with much of it is asked for once more. Without target and native only the thinking is looked for. */
+export function cleanChapter(d, target, native) {
   if (!d || typeof d !== 'object' || !Array.isArray(d.sections)) return null;
-  return {
-    title: S(d.title, 160), intro: S(d.intro, 1200),
-    sections: arr(d.sections, 10).map((s) => ({
-      heading: S(s?.heading, 160), text: S(s?.text, 4000), table: table(s?.table),
-      examples: arr(s?.examples, 8).map(example), tip: S(s?.tip, 800),
-    })),
-    mistakes: arr(d.mistakes, 8).map((m) => ({ wrong: S(m?.wrong, 300), right: S(m?.right, 300), why: S(m?.why, 600) })),
-    practice: arr(d.practice, 10).map((p) => ({ q: S(p?.q, 400), a: S(p?.a, 300) })),
+  const ok = target && native ? scriptsOf(target, native) : null;
+  let dropped = 0;
+  const bad = (...xs) => xs.some((x) => thinks(x) || (ok && strays(x, ok)));
+  const keep = (x, ...fields) => { const b = bad(...fields.map((f) => x[f])); if (b) dropped++; return !b; };
+  const prose = (v, max) => {
+    const t = S(v, max);
+    if (!bad(t)) return t;
+    const parts = t.split(/(?<=[.!?。])\s+/);
+    const good = parts.filter((p) => !bad(p));
+    dropped += parts.length - good.length;
+    return good.join(' ');
   };
+  const out = {
+    title: S(d.title, 160), intro: prose(d.intro, 1200),
+    sections: arr(d.sections, 10).map((s) => ({
+      heading: S(s?.heading, 160), text: prose(s?.text, 4000), table: table(s?.table),
+      examples: arr(s?.examples, 8).map(example).filter((x) => keep(x, 'text', 'tr', 'note')), tip: prose(s?.tip, 800),
+    })),
+    mistakes: arr(d.mistakes, 8).map((m) => ({ wrong: S(m?.wrong, 300), right: S(m?.right, 300), why: S(m?.why, 600) }))
+      .filter((m) => keep(m, 'wrong', 'right', 'why') && (!sameText(m.wrong, m.right) || (dropped++, false))),
+    practice: arr(d.practice, 10).map((p) => ({ q: S(p?.q, 400), a: S(p?.a, 300) })).filter((p) => p.a && keep(p, 'q', 'a')),
+  };
+  Object.defineProperty(out, 'dropped', { value: dropped, enumerable: false });
+  return out;
 }
 
 export function cleanTranslation(r) {

@@ -233,9 +233,9 @@ test('homonyms: forms that fit any word with this spelling and article stay', as
   assert.equal(coin.forms, 'øret, øre, ørene');
 });
 
-test('what the dictionary cannot tell stays as it is, and a Worker never goes over its request budget', async () => {
+test('what the dictionary cannot tell stays as it is, a word it does not have is told apart, and a Worker never goes over its request budget', async () => {
   const { O, calls } = dictionaryTab();
-  assert.equal(await O.verify({ term: 'en huiaka', pos: 'noun', forms: '' }, 'nb'), null, 'a made-up word');
+  assert.deepEqual({ ...(await O.verify({ term: 'en huiaka', pos: 'noun', forms: '' }, 'nb')) }, { none: 1 }, 'a made-up word: not in the dictionary');
   assert.equal(await O.verify({ term: 'god morgen', pos: 'phrase' }, 'nb'), null);
   assert.equal(await O.verify({ term: 'å glede seg', pos: 'verb' }, 'nb'), null, 'a reflexive verb is a phrase here');
   assert.equal(await O.verify({ term: 'der Hund', pos: 'noun' }, 'de'), null, 'only Norwegian has an official dictionary here');

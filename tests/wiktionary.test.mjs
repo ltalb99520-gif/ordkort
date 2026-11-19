@@ -79,7 +79,8 @@ test('a language without articles gets the noun’s gender; forms Wiktionary nev
       'a form that is not in the tables goes');
     assert.equal((await w.card('fr', 'la maison', 'noun', 'maisonz')).forms, 'maisonz', 'too little known about the forms: nothing is dropped');
     assert.equal((await w.card('de', 'der Hund', 'noun', 'Hünde')).forms, 'Hünde', 'none of the card’s forms known: nothing is dropped');
-    assert.equal(await check({ get: async () => null, set: async () => {} }, 'de', { term: 'das Quatschwort', pos: 'noun' }), null);
+    assert.deepEqual(await check({ get: async () => null, set: async () => {} }, 'de', { term: 'das Quatschwort', pos: 'noun' }), { none: 1 }, 'a word Wiktionary does not have');
+    assert.equal(await check({ get: async () => null, set: async () => {} }, 'de', { term: 'guten Morgen', pos: 'phrase' }), null, 'a phrase: nothing to tell');
     assert.equal(await check({ get: async () => null, set: async () => {} }, 'zh', { term: '书', pos: 'noun' }), null, 'no inflection to check');
   } finally { w.restore(); }
 });
