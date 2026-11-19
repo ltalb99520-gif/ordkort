@@ -14,7 +14,7 @@ const API = 'https://en.wiktionary.org/w/api.php';
 // Wiktionary's language codes where they differ from ours
 const WIKT_LANG = { sr: 'sh', hr: 'sh', bs: 'sh', prs: 'fa' };
 // languages whose words hardly inflect: nothing to check there
-const SKIP = ['zh', 'ja', 'th', 'vi', 'ms', 'id', 'tl', 'nb', 'nn']; // Norwegian has the official dictionary
+const SKIP = ['zh', 'ja', 'th', 'vi', 'ms', 'id', 'tl', 'nb', 'nn', 'yue', 'km', 'lo', 'my', 'tok']; // Norwegian has the official dictionary
 const POS_HEADING = { noun: /^(Noun|Proper_noun)(_\d+)?$/, verb: /^Verb(_\d+)?$/ };
 const GENDER = { 'masculine gender': 'm', 'feminine gender': 'f', 'neuter gender': 'n', 'common gender': 'c' };
 const MONTH = 30 * 864e5;

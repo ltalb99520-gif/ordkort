@@ -19,7 +19,7 @@ export const TEACH = {
     getH: 'Hva deltakerne får',
     get: [
       '29 temaer, fra hilsener og tall til helse, arbeid, bolig og offentlige tjenester, på nivå A1–C1.',
-      'Oversettelser og forklaringer på 60 språk, blant annet ukrainsk, arabisk, tigrinja, somali, dari, polsk og engelsk.',
+      'Oversettelser og forklaringer på 165 språk, blant annet ukrainsk, arabisk, tigrinja, somali, dari, polsk og engelsk.',
       'Substantiv og verb kontrollert mot Bokmålsordboka, så kjønn og bøyning stemmer.',
       'Repetisjon med mellomrom (FSRS): hvert ord kommer tilbake rett før det ville blitt glemt. Ordene kan også øves med flervalg, skriving, lytting og utfylling av eksempler.',
       'Det virker på mobilen, også uten nett, og kan legges på hjemskjermen som en app.',
@@ -63,7 +63,7 @@ export const TEACH = {
     getH: 'What learners get',
     get: [
       '29 topics, from greetings and numbers to health, work, housing and public services, at levels A1–C1.',
-      'Translations and explanations in 60 languages, among them Ukrainian, Arabic, Tigrinya, Somali, Dari, Polish and English.',
+      'Translations and explanations in 165 languages, among them Ukrainian, Arabic, Tigrinya, Somali, Dari, Polish and English.',
       'Nouns and verbs checked against Bokmålsordboka, the official dictionary, so genders and inflections are right.',
       'Spaced repetition (FSRS): each word comes back just before it would be forgotten. Words can also be practised by multiple choice, typing, listening and filling the gap in an example.',
       'It works on phones, offline too, and installs on the home screen like an app.',

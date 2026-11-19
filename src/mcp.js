@@ -229,7 +229,7 @@ const lang = { type: 'string', description: 'A language code from list_languages
 const TOOLS = [
   {
     name: 'list_languages', title: 'Languages',
-    description: 'The 60 languages Ordkort teaches and explains in, with their codes.',
+    description: 'The 165 languages Ordkort teaches and explains in, with their codes.',
     inputSchema: { type: 'object', properties: {} },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
@@ -478,7 +478,7 @@ export function serverCard() {
   return {
     serverInfo: { name: 'ordkort', title: 'Ordkort', version: '1.0.0' },
     description: 'Make flashcard decks (with pictures) and card designs for Ordkort, a free vocabulary site with spaced '
-      + 'repetition in 60 languages. Returns links the person opens to add them; it never sees anyone\'s cards.',
+      + 'repetition in 165 languages. Returns links the person opens to add them; it never sees anyone\'s cards.',
     websiteUrl: SITE,
     documentationUrl: 'https://github.com/silicq/ordkort#mcp',
     protocolVersions: VERSIONS,

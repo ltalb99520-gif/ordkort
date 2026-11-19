@@ -29,7 +29,7 @@ export const PAGES = {
   en: {
     hreflang: 'en', htmlLang: 'en', locale: 'en_US', name: 'English',
     title: 'Ordkort — learn any language with flashcards, free, no ads',
-    desc: 'Free flashcards with spaced repetition for 60 languages: word lists by topic, a dictionary, grammar and a translator that explains every word. No ads.',
+    desc: 'Free flashcards with spaced repetition for 165 languages: word lists by topic, a dictionary, grammar and a translator that explains every word. No ads.',
     h1: 'Learn any language with flashcards',
     lede: 'Ordkort gives you ready word lists for your topic and level, reminds you of each word just before you would forget it, and explains the grammar behind it. Free, without ads and without an account.',
     cta: 'Start learning',
@@ -56,7 +56,7 @@ export const PAGES = {
       'Ordkort is open source (AGPL-3.0). The AI answers are shared: whatever someone has already asked opens instantly for the next person, which keeps the site free.',
     ],
     how: 'How it works', source: 'Source code on GitHub',
-    languagesH: '60 languages',
+    languagesH: '165 languages',
     languagesP: 'Learn any of them from any other:',
     faqH: 'Questions',
     faq: [
@@ -76,7 +76,7 @@ export const PAGES = {
   ru: {
     hreflang: 'ru', htmlLang: 'ru', locale: 'ru_RU', name: 'Русский',
     title: 'Ordkort — языки по карточкам, бесплатно и без рекламы',
-    desc: 'Бесплатные карточки с интервальным повторением для 60 языков: слова по темам, словарь, грамматика и переводчик, который объясняет каждое слово. Без рекламы.',
+    desc: 'Бесплатные карточки с интервальным повторением для 165 языков: слова по темам, словарь, грамматика и переводчик, который объясняет каждое слово. Без рекламы.',
     h1: 'Учите любой язык по карточкам',
     lede: 'Ordkort подбирает слова по теме и уровню, напоминает каждое слово как раз перед тем, как вы его забудете, и объясняет грамматику. Бесплатно, без рекламы и без аккаунта.',
     cta: 'Начать учить',
@@ -103,7 +103,7 @@ export const PAGES = {
       'Ordkort — открытый проект (AGPL-3.0). Ответы ИИ общие: то, что кто-то уже спрашивал, следующий человек получает мгновенно, поэтому сайт остаётся бесплатным.',
     ],
     how: 'Как это устроено', source: 'Исходный код на GitHub',
-    languagesH: '60 языков',
+    languagesH: '165 языков',
     languagesP: 'Учите любой из них с любого другого:',
     faqH: 'Вопросы',
     faq: [
@@ -123,7 +123,7 @@ export const PAGES = {
   uk: {
     hreflang: 'uk', htmlLang: 'uk', locale: 'uk_UA', name: 'Українська',
     title: 'Ordkort — мови за картками, безкоштовно й без реклами',
-    desc: 'Безкоштовні картки з інтервальним повторенням для 60 мов: слова за темами, словник, граматика й перекладач, що пояснює кожне слово. Без реклами.',
+    desc: 'Безкоштовні картки з інтервальним повторенням для 165 мов: слова за темами, словник, граматика й перекладач, що пояснює кожне слово. Без реклами.',
     h1: 'Вивчайте будь-яку мову за картками',
     lede: 'Ordkort добирає слова за темою й рівнем, нагадує кожне слово саме тоді, коли ви от-от його забудете, і пояснює граматику. Безкоштовно, без реклами й без акаунта.',
     cta: 'Почати вчити',
@@ -150,7 +150,7 @@ export const PAGES = {
       'Ordkort — відкритий проєкт (AGPL-3.0). Відповіді ШІ спільні: те, про що хтось уже питав, наступна людина отримує миттєво, тож сайт лишається безкоштовним.',
     ],
     how: 'Як це влаштовано', source: 'Вихідний код на GitHub',
-    languagesH: '60 мов',
+    languagesH: '165 мов',
     languagesP: 'Вивчайте будь-яку з них з будь-якої іншої:',
     faqH: 'Запитання',
     faq: [
@@ -170,7 +170,7 @@ export const PAGES = {
   nb: {
     hreflang: 'nb', htmlLang: 'nb', locale: 'nb_NO', name: 'Norsk',
     title: 'Ordkort — lær språk med ordkort, gratis og uten reklame',
-    desc: 'Gratis ordkort med repetisjon til rett tid for 60 språk: gloser etter tema, ordbok, grammatikk og en oversetter som forklarer hvert ord. Uten reklame.',
+    desc: 'Gratis ordkort med repetisjon til rett tid for 165 språk: gloser etter tema, ordbok, grammatikk og en oversetter som forklarer hvert ord. Uten reklame.',
     h1: 'Lær hvilket som helst språk med ordkort',
     lede: 'Ordkort gir deg ferdige gloser for tema og nivå, minner deg på hvert ord akkurat før du ville glemt det, og forklarer grammatikken bak. Gratis, uten reklame og uten konto.',
     cta: 'Begynn å lære',
@@ -197,7 +197,7 @@ export const PAGES = {
       'Ordkort har åpen kildekode (AGPL-3.0). KI-svarene deles: det noen allerede har spurt om, åpnes med en gang for nestemann – derfor kan siden være gratis.',
     ],
     how: 'Slik fungerer det', source: 'Kildekode på GitHub',
-    languagesH: '60 språk',
+    languagesH: '165 språk',
     languagesP: 'Lær hvilket som helst av dem fra hvilket som helst annet:',
     faqH: 'Spørsmål',
     faq: [
@@ -244,7 +244,7 @@ export const PAGES = {
       'Ordkort مفتوح المصدر (AGPL-3.0). إجابات الذكاء الاصطناعي مشتركة: ما سأل عنه أحدهم يُفتح فورًا لمن يأتي بعده، ولهذا يبقى الموقع مجانيًا.',
     ],
     how: 'كيف يعمل', source: 'الشيفرة المصدرية على GitHub',
-    languagesH: '60 لغة',
+    languagesH: '165 لغة',
     languagesP: 'تعلّم أيًّا منها انطلاقًا من أي لغة أخرى:',
     faqH: 'أسئلة',
     faq: [
@@ -264,7 +264,7 @@ export const PAGES = {
   zh: {
     hreflang: 'zh-Hans', htmlLang: 'zh-Hans', locale: 'zh_CN', name: '中文',
     title: 'Ordkort — 用单词卡学任何语言：免费、无广告、无需注册',
-    desc: '免费的间隔重复单词卡，支持 60 种语言：按主题准备好的词汇、词典、语法书，以及逐词讲解的翻译。无广告，无需注册，可离线使用，卡片只保存在你的浏览器里。',
+    desc: '免费的间隔重复单词卡，支持 165 种语言：按主题准备好的词汇、词典、语法书，以及逐词讲解的翻译。无广告，无需注册，可离线使用，卡片只保存在你的浏览器里。',
     h1: '用单词卡学任何语言',
     lede: 'Ordkort 按主题和水平为你准备好词汇，在你快要忘记一个词时及时提醒你，并讲清背后的语法。免费、无广告、无需账号。',
     cta: '开始学习',
@@ -291,7 +291,7 @@ export const PAGES = {
       'Ordkort 是开源项目（AGPL-3.0）。AI 的回答是共享的：别人问过的内容，下一个人可以立即打开——所以网站能保持免费。',
     ],
     how: '工作原理', source: 'GitHub 上的源代码',
-    languagesH: '60 种语言',
+    languagesH: '165 种语言',
     languagesP: '可以从任何一种语言学习其他任何一种：',
     faqH: '常见问题',
     faq: [
@@ -310,7 +310,7 @@ export const PAGES = {
   pl: {
     hreflang: 'pl', htmlLang: 'pl', locale: 'pl_PL', name: 'Polski',
     title: 'Ordkort — ucz się języków z fiszkami, za darmo i bez reklam',
-    desc: 'Darmowe fiszki z powtórkami w odstępach dla 60 języków: słówka według tematów, słownik, gramatyka i tłumacz, który wyjaśnia każde słowo. Bez reklam.',
+    desc: 'Darmowe fiszki z powtórkami w odstępach dla 165 języków: słówka według tematów, słownik, gramatyka i tłumacz, który wyjaśnia każde słowo. Bez reklam.',
     h1: 'Ucz się dowolnego języka z fiszkami',
     lede: 'Ordkort daje gotowe listy słówek do twojego tematu i poziomu, przypomina każde słowo tuż przed tym, zanim je zapomnisz, i wyjaśnia gramatykę, która za nim stoi. Za darmo, bez reklam i bez konta.',
     cta: 'Zacznij naukę',
@@ -337,7 +337,7 @@ export const PAGES = {
       'Ordkort ma otwarty kod źródłowy (AGPL-3.0). Odpowiedzi AI są wspólne: to, o co ktoś już zapytał, otwiera się od razu dla następnej osoby — dzięki temu strona pozostaje darmowa.',
     ],
     how: 'Jak to działa', source: 'Kod źródłowy na GitHubie',
-    languagesH: '60 języków',
+    languagesH: '165 języków',
     languagesP: 'Ucz się dowolnego z nich z dowolnego innego:',
     faqH: 'Pytania',
     faq: [
