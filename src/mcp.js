@@ -8,7 +8,7 @@
 import { App } from './core/shared.js';
 import { takeSimple } from './core/limits.js';
 import { HttpError, str, arr, int, readText } from './core/util.js';
-import { bankWords } from './ai/routes.js';
+import { bankWords, verified } from './ai/routes.js';
 import { cleanDeck, storeShare } from './decks/share.js';
 import * as images from './sources/images.js';
 
@@ -218,7 +218,7 @@ person the link.`;
 const INSTRUCTIONS = `Ordkort (${SITE}) is a free site for learning vocabulary with flashcards and spaced repetition. `
   + 'You cannot see or change anyone\'s cards. You make things the person adds themselves: create_deck returns a link '
   + 'that adds a deck to their cards, create_design a link that changes how their cards look. Give them the link. '
-  + 'Prefer ready_words (checked against dictionaries) for common topics, and find_pictures for free pictures with '
+  + 'Prefer ready_words (its nouns and verbs are checked against dictionaries where one has them) for common topics, and find_pictures for free pictures with '
   + 'their credits (give it the bare word and its language). A deck may have a cover (cover_url), a small picture '
   + 'shown instead of its emoji: find one for the topic with find_pictures. Languages are ISO codes from list_languages; "target" is the language being learnt, "native" the '
   + 'language of the translations. Read design_guide before create_design. When you give the person a link from '
@@ -242,7 +242,8 @@ const TOOLS = [
   {
     name: 'ready_words', title: 'Ready words for a topic',
     description: 'Words already in Ordkort\'s shared bank for a topic and level, with translations, forms and examples. '
-      + 'Nouns and verbs have been checked against dictionaries. May be empty for a rare pair of languages; then write the words yourself.',
+      + 'Nouns and verbs a dictionary confirmed have "checked": true; "checked": false means no dictionary had the word or none was asked, '
+      + 'so double-check those, especially in rarer languages. May be empty for a rare pair of languages; then write the words yourself.',
     inputSchema: {
       type: 'object', required: ['target', 'native', 'topic'],
       properties: {
@@ -371,8 +372,8 @@ async function callTool(name, a, env, key) {
     const level = LEVELS.includes(a.level) ? a.level : 'A1';
     let words;
     try { words = await bankWords(env, { target: str(a.target, 8), native: str(a.native, 8), topic: str(a.topic, 40), level, n: int(a.count, 1, 100, 30) }); } catch (e) { return fail(`Cannot read that: ${e.code || e.message}. Check the language codes and the topic id.`); }
-    const out = words.map((w) => ({ term: w.term, translation: w.tr, part_of_speech: w.pos, forms: w.forms, pronunciation: w.pron, example: w.ex, example_translation: w.ex_tr }));
-    if (!out.length) return text('The bank has no words for this yet. Write the words yourself; nouns with their article.', { words: [] });
+    const out = words.map((w) => ({ term: w.term, translation: w.tr, part_of_speech: w.pos, forms: w.forms, pronunciation: w.pron, example: w.ex, example_translation: w.ex_tr, checked: verified(w) }));
+    if (!out.length) return text('The bank has no words for this yet. Write the words yourself, in the form the language’s dictionaries use (with an article only where that language has one).', { words: [] });
     return text(out.map((w) => `${w.term} — ${w.translation}${w.example ? `  (${w.example})` : ''}`).join('\n'), { words: out });
   }
   if (name === 'find_pictures') {

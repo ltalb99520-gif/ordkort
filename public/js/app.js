@@ -360,7 +360,7 @@
     const pause = (ms) => new Promise((res) => setTimeout(res, ms));
     // what changes on a card: a new article, other forms (then its gender label is stale), a confirmed gender
     function fixOf(c, r) {
-      if (!r) return null;
+      if (!r || r.none) return null; // a word the dictionary does not have: nothing to fix by it
       const fix = {};
       if (r.term !== c.term) Object.assign(fix, { term: r.term, gram: '' });
       if (r.forms !== c.forms) fix.forms = r.forms;

@@ -29,11 +29,13 @@ if (b.map) writeFileSync(mapFile, b.map);
 
 // the bundle is made from the scripts, which are hashed themselves
 const derived = new Set([out, bundleFile, mapFile]);
+// the lexicon (scripts/lexicon.mjs) is read by the Worker, never by the app: thousands of files left out of the version
+const lexicon = join(root, 'lex');
 const files = [];
 (function walk(dir) {
   for (const f of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, f.name);
-    if (f.isDirectory()) walk(p);
+    if (f.isDirectory()) { if (p !== lexicon) walk(p); }
     else if (!derived.has(p)) files.push(p);
   }
 })(root);

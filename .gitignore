@@ -17,3 +17,7 @@ public/vendor/
 
 # security audit register: a map of weaknesses, never committed in a public repository
 .security-audit/
+
+# the lexicon, made before a deploy by scripts/lexicon.mjs from Wiktionary data (kaikki.org), and its downloads
+public/lex/
+.lexicon/

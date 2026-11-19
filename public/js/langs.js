@@ -219,7 +219,7 @@
     ['Devanagari', /\p{Script=Devanagari}/u, ['hi', 'mr', 'ne', 'sa']],
     ['Bengali', /\p{Script=Bengali}/u, ['bn', 'as']],
     ['Thai', /\p{Script=Thai}/u, ['th']],
-    ['Greek', /\p{Script=Greek}/u, ['el']],
+    ['Greek', /\p{Script=Greek}/u, ['el', 'grc']],
     ['Georgian', /\p{Script=Georgian}/u, ['ka']],
     ['Armenian', /\p{Script=Armenian}/u, ['hy']],
     ['Tamil', /\p{Script=Tamil}/u, ['ta']],
@@ -245,6 +245,7 @@
     ['be', /ў/i], ['sr', /[ђћџјљњ]/i], ['kk', /[әғқңөұүһ]/i],
     ['ug', /[ېۋڭۈۆۇ]/], ['ur', /[ٹڈڑںے]/], ['ps', /[ځڅښږ]/], ['ckb', /[ڵڕۆێ]/], ['fa', /[پچژگ]/],
     ['ja', /[\p{Script=Hiragana}\p{Script=Katakana}]/u],
+    ['grc', /[ἀ-῿]/], // polytonic Greek: breathings and accents modern Greek has dropped
     ['nb', /[æø]/i], ['sv', /ä.*å|å.*ä|ö.*å|å.*ö/i], ['da', /[æø]/i], ['de', /[ßü]|[äö]/i], ['es', /[ñ¿¡]/i], ['pt', /[ãõ]/i],
     ['pl', /[ąęłśźżń]/i], ['cs', /[řěů]/i], ['sk', /[ľĺŕô]/i], ['tr', /[ğışİ]/], ['ro', /[ășțşţ]/i], ['hu', /[őű]/i],
     ['vi', /[ơưđạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i], ['is', /[þð]/i], ['lt', /[ėįųū]/i], ['lv', /[āēīņķļ]/i],

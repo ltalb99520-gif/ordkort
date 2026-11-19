@@ -61,7 +61,12 @@ Ordkort is a lightweight site for learning almost any language from almost any o
   Lexemes](https://www.wikidata.org/wiki/Wikidata:Lexicographical_data) (CC0) for every language, with every
   form and its features, the gender and IPA; [BÍN](https://bin.arnastofnun.is) (CC BY-SA 4.0) for Icelandic;
   [SALDO](https://spraakbanken.gu.se/resurs/saldom) of Språkbanken (CC BY 4.0) for Swedish. When none of them
-  has the word, the page names each one that was asked (one that did not answer is not named). Translations
+  has the word, the page names each one that was asked (one that did not answer is not named). Every word the AI
+  writes for a deck (adjectives and adverbs too, in every language) is also looked up in a lexicon made before a
+  deploy from Wiktionary's data as extracted by [wiktextract](https://github.com/tatuylonen/wiktextract)
+  ([kaikki.org](https://kaikki.org), CC BY-SA 4.0): `npm run lexicon` writes it to `public/lex/` (not in git), and
+  the Worker reads one small file a word, without asking another site. A word no dictionary has is never called
+  checked, and a list made mostly of such words is not shared in the word bank. Translations
   still come from the AI alone. The note and the origin of an entry are in the learner's language whatever
   language the query is in; where the two are written in different scripts, one the AI wrote in the language
   being learnt is left out rather than shown.
@@ -145,7 +150,7 @@ when you agree. It never sees or changes your cards.
 |---|---|
 | `list_languages` | The 165 languages and their codes |
 | `list_topics` | The built-in topics and their ids |
-| `ready_words` | Words from the shared bank for a topic and level, checked against dictionaries |
+| `ready_words` | Words from the shared bank for a topic and level; nouns and verbs a dictionary confirmed are marked `checked` |
 | `find_pictures` | Free pictures for a word in its language: the Wikidata item's Commons picture first, then Pixabay's and Openverse's, with their credits |
 | `design_guide` | Everything an AI needs to restyle the site: how a look is applied and cleaned, the card's structure, fields, pictures, fonts, every CSS variable, the parts of each screen (with body classes per screen), light and dark themes, what not to do, a whole example and a checklist |
 | `create_deck` | A deck of up to 500 cards, pictures and a cover by URL included → a link that adds it |

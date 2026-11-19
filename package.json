@@ -16,7 +16,8 @@
     "seo:ordbok": "node scripts/fetch-ordbok.mjs",
     "deploy": "wrangler deploy",
     "warm": "node scripts/warm.mjs",
-    "indexnow": "node scripts/indexnow.mjs"
+    "indexnow": "node scripts/indexnow.mjs",
+    "lexicon": "node scripts/lexicon.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.1",

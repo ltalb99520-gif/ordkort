@@ -172,8 +172,9 @@
   /* Checks a noun or verb card against the dictionary: the article must be one the noun really takes
      ("et ingrediens" → "en ingrediens") and the forms must be its real forms ("potten, pott, pottene" →
      "potten, potter, pottene"). Homonyms count: "et øre" may be the ear or the coin, so forms that fit either
-     stay. Resolves to { term, forms } — unchanged when all is right — or null when the dictionary cannot tell
-     (not a noun or verb, a phrase, a word it does not have); rejects when the network or the budget fails. */
+     stay. Resolves to { term, forms } — unchanged when all is right —, { none: 1 } when the dictionary does not have
+     the word (it may be invented), or null when it cannot tell (not a noun or verb, a phrase); rejects when the
+     network or the budget fails. */
   const SLOTS = { NOUN: ['Sing+Def', 'Plur+Ind', 'Plur+Def'], VERB: ['Pres', 'Past', '<PerfPart>'] };
   async function verify({ term, pos, forms }, lang, { signal, budget } = {}) {
     const dict = dictFor(lang);
@@ -200,7 +201,7 @@
         }
       }
     }
-    if (!pars.length) return null;
+    if (!pars.length) return { none: 1 };
 
     let article = art, use = pars;
     if (wc === 'NOUN') {
