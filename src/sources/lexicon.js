@@ -83,5 +83,40 @@ export async function knows(env, lang, word) {
   return list ? list.length > 0 : undefined;
 }
 
+/* What a word means, in English: its glosses (of this part of speech, when one is given) and the English words whose
+   translation tables give it ("масло": butter, oil; "mánnu": moon, month) → a Set of English texts, empty when the
+   lexicon has nothing on the word, undefined without a lexicon for the language. English is itself. */
+export async function english(env, lang, word, pos) {
+  if (lang === 'en') return new Set([String(word).trim()]);
+  const list = await lookup(env, lang, word);
+  if (!list) return undefined;
+  const out = new Set();
+  for (const x of list) {
+    for (const e of x.x || []) out.add(e);
+    if (x.s && (!pos || x.p === pos)) for (const s of x.s) out.add(s);
+  }
+  // a form brings what its word means ("fwyd" → bwyd: food)
+  const of = !out.size && list.find((x) => x.of && (!pos || x.p === pos))?.of?.[0];
+  if (of) for (const s of await english(env, lang, of, pos)) out.add(s);
+  return out;
+}
+
+// the words that carry the meaning of English glosses and translations: "to eat (food)" → eat, food
+const STOP = new Set(['to', 'a', 'an', 'the', 'of', 'be', 'one', 'someone', 'something', 'somebody', 'oneself', 'in', 'on', 'at',
+  'for', 'with', 'by', 'or', 'and', 'as', 'from', 'that', 'which', 'who', 'some', 'any', 'very', 'its', 'it', 'is', 'are', 'not',
+  'usually', 'especially', 'etc', 'eg', 'ie', 'also', 'used', 'kind', 'type', 'sort', 'act', 'state', 'quality', 'into', 'up', 'out']);
+export function meaningWords(texts) {
+  const out = new Set();
+  for (const t of texts) {
+    for (const w of String(t).toLowerCase().replace(/\([^)]*\)/g, ' ').split(/[^\p{L}\p{M}'-]+/u)) {
+      if (w.length < 2 || STOP.has(w)) continue;
+      out.add(w);
+      // plurals and verb forms of glosses: "eats", "cats" → eat, cat
+      if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) out.add(w.slice(0, -1));
+    }
+  }
+  return out;
+}
+
 // the files of the lexicon read by the tests, without the network: forget what this isolate has read
 export function forget() { metas.clear(); shards.clear(); }
