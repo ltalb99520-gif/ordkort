@@ -186,3 +186,41 @@ test('a topic’s words in a language the AI knows little come from the dictiona
   assert.match(p.user, /ONLY from this list of real Northern Sámi words.*čáhci = water/s);
   assert.doesNotMatch(wordsPrompt({ target: 'se', native: 'ru', topic: 'Food', level: 'A1', n: 5, avoid: [] }).user, /ONLY from this list/);
 });
+
+test('the translator’s analysis is checked against the dictionary: a numeral before a feminine noun, a count form taken for a plural', async () => {
+  L.forget();
+  const env = assets();
+  const lines = {
+    cy: [
+      { pos: 'num', word: 'tri', lang_code: 'cy', head_templates: [{ expansion: 'tri m (feminine tair)' }], forms: [{ form: 'tair', tags: ['feminine'] }], senses: [{ glosses: ['three'], tags: ['masculine'] }] },
+      { pos: 'num', word: 'dri', lang_code: 'cy', senses: [{ form_of: [{ word: 'tri' }], glosses: ['soft mutation of tri'] }] },
+      { pos: 'noun', word: 'blynedd', lang_code: 'cy', head_templates: [{ expansion: 'blynedd f' }], senses: [{ glosses: ['year (count form)'], tags: ['feminine'] }] },
+    ],
+  };
+  const { shards } = build(lines.cy.map(compact).filter(Boolean), 'cy');
+  const files = new Map(shards.map((s, i) => [`/lex/cy/${i}.json`, JSON.stringify(s)]));
+  files.set('/lex/cy/meta.json', JSON.stringify({ n: shards.length }));
+  env.ASSETS.fetch = async (req) => { const p = new URL(req.url).pathname; return files.has(p) ? new Response(files.get(p)) : new Response('', { status: 404 }); };
+  const asked = [];
+  const real = globalThis.fetch;
+  const analysis = { source_lang: 'cy', target_lang: 'ru', translation: 'Я жил в Осло три года.', analyzed: 'source', structure: '', rules: [], tips: [], alternatives: [],
+    tokens: [{ t: 'am', lemma: 'am', pos: 'preposition', form: '', why: '' }, { t: 'dri', lemma: 'tri', pos: 'numeral', form: 'числительное', why: 'мягкая мутация' }, { t: 'blynedd', lemma: 'blwyddyn', pos: 'noun', form: 'мн. ч.', why: 'множественное число' }] };
+  const fix = { translation: '', tokens: [{ i: 1, t: 'dair', lemma: 'tri', form: 'числительное, женский род', why: 'Перед существительным женского рода — tair, после am — dair.' }, { i: 2, t: 'blynedd', lemma: 'blynedd', form: 'счётная форма', why: 'Счётная форма после числительных, не множественное число.' }] };
+  globalThis.fetch = async (url, o) => {
+    const body = JSON.parse(o.body);
+    asked.push(body.messages.at(-1).content);
+    const content = asked.length === 1 ? analysis : fix;
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }), { status: 200 });
+  };
+  try {
+    const api = await import('../src/ai/routes.js');
+    const req = new Request('https://ordkort.test/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cy', native: 'ru', from: 'auto', to: 'ru', text: 'Rwyf wedi byw yn Oslo am dri blynedd.' }) });
+    const out = await (await api.translate(req, { DB: await database(), GROQ_API_KEY: 'k', GROQ_MODELS: 'lex3', ...env }, 'ifan.home')).json();
+    assert.equal(asked.length, 2, 'one small check after the analysis');
+    assert.match(asked[1], /blynedd - noun \(f\); blynedd f; year \(count form\)/);
+    assert.match(asked[1], /NOTE: "dri" goes with "blynedd", a feminine noun: the feminine form of tri is tair/);
+    assert.equal(out.tokens[1].t, 'dri', 'the learner’s own word stays as written');
+    assert.match(out.tokens[1].why, /^dri → dair\. /);
+    assert.equal(out.tokens[2].form, 'счётная форма');
+  } finally { globalThis.fetch = real; }
+});

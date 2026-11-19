@@ -270,12 +270,13 @@ ${list}
 DICTIONARY FACTS:
 ${facts.join('\n')}
 Report only what the facts contradict, not your own doubts: a word may have several parts of speech, and the facts list only some of its forms. Keep the mutations or endings the words before it cause.
+Go through the tokens one by one. For every token whose word or lemma has a fact line: compare its lemma, gender and number with that line (a "count form" is used after numerals and is not a plural; the lemma is the form the facts give as the headword). For every numeral, article, pronoun or adjective: check that it agrees with the gender and number the facts give for the noun it goes with (a numeral with a masculine and a feminine form, like "m (feminine …)", takes the feminine form before a feminine noun).
 Look for: a word in the wrong gender or number (a numeral or adjective that must agree with a feminine noun, for example), a wrong mutation or ending, a lemma or part of speech that is not the word's, a "form" that says something the facts contradict ("plural" for a word the facts give as a singular or count form, for example).
 ${fixText ? `If the text has such a mistake, give the corrected ${T} text in "translation" (change only what is wrong); otherwise "".` : `The text is the learner's own: do not change it ("translation" is ""), but when one of its words is wrong, its "why" says so first and gives the right form (in ${N}).`}
 In "tokens" give ONLY the tokens that must change, by index, with every field corrected: "t" (the word as in the corrected text), "lemma", "form" (in ${N}), "why" (1-3 short sentences in ${N}: the rule, now right; only the final explanation, never your reasoning or doubts).
 If everything is right, reply {"translation":"","tokens":[]}.
 JSON shape: {"translation":"","tokens":[{"i":0,"t":"","lemma":"","form":"","why":""}]}`;
-  return { system: SYSTEM(target), user, max: 2500, temperature: 0.1, effort: 'medium' };
+  return { system: SYSTEM(target), user, max: 3000, temperature: 0.1, effort: 'high' };
 }
 export function cleanFix(r) {
   if (!r || typeof r !== 'object') return null;

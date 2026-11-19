@@ -117,6 +117,8 @@ export async function facts(env, lang, words, max = 30) {
       if (of) hits = ((await lookup(env, lang, of)) || []).filter((x) => x.p && !x.of);
     }
     for (const x of hits.slice(0, 2)) {
+      if (seen.has(x.w + '|' + x.p)) continue;
+      seen.add(x.w + '|' + x.p);
       const forms = x.h ? '' : (x.f || []).slice(0, 4).join(', ');
       out.push(`${x.w} - ${x.p}${x.g ? ` (${x.g})` : ''}${x.h ? `; ${x.h}` : ''}${forms ? `; forms: ${forms}` : ''}${x.s?.length ? `; ${x.s.slice(0, 2).join('; ')}` : ''}`);
     }

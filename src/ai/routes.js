@@ -503,15 +503,39 @@ export async function translate(request, env, key) {
    the sentence itself and the tokens whose form or explanation was wrong ("am dri blynedd" -> "am dair blynedd": the
    year is feminine). Only for the languages the AI knows less well (WELL_KNOWN are the rest), with one small extra
    request, and the answer is saved, so a text is checked once for everybody. */
+/* What the dictionary says about agreement, found without the AI: a word with a feminine form of its own ("tri m
+   (feminine tair)") right before a noun that is only feminine ("blynedd f") must take that form. Said to the AI in
+   plain words, it is not missed ("am dri blynedd" -> "am dair blynedd"). */
+async function agreement(env, target, tokens) {
+  const notes = [];
+  for (let i = 0; i < tokens.length - 1 && notes.length < 5; i++) {
+    const a = tokens[i];
+    if (!['numeral', 'adjective', 'determiner', 'article', 'pronoun'].includes(a.pos)) continue;
+    const e = await L.entry(env, target, a.lemma || a.t, a.pos);
+    const fem = /feminine ([^\s,;)]+)/.exec(e?.head || '')?.[1];
+    if (!fem) continue;
+    const next = tokens.slice(i + 1, i + 3).find((x) => x.pos === 'noun');
+    const n = next && ((await L.entry(env, target, next.t, 'noun')) || (await L.entry(env, target, next.lemma, 'noun')));
+    if (n && n.genders.has('f') && !n.genders.has('m')) notes.push(`NOTE: "${a.t}" goes with "${next.t}", a feminine noun: the feminine form of ${a.lemma || a.t} is ${fem} (with any mutation the word before causes).`);
+  }
+  return notes;
+}
 const WELL_KNOWN = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'uk', 'pl', 'nl', 'sv', 'da', 'nb', 'nn', 'zh', 'ja', 'ko'];
 async function checkTranslation(env, target, native, r) {
   if (WELL_KNOWN.includes(target) || !r?.tokens?.length) return r;
   const facts = await L.facts(env, target, r.tokens.flatMap((x) => [x.t, x.lemma])).catch(() => []);
   if (!facts.length) return r;
+  facts.push(...await agreement(env, target, r.tokens).catch(() => []));
   const text = r.analyzed === 'source' ? null : r.translation;
   const fix = P.cleanFix(await groq(env, P.checkPrompt({ target, native, text: text || r.tokens.map((x) => x.t).join(' '), tokens: r.tokens, facts, fixText: !!text })));
   if (!fix) return r;
-  const tokens = r.tokens.map((x, i) => (fix.tokens[i] ? { ...x, ...fix.tokens[i] } : x));
+  // in the learner's own text the word stays as written; its explanation starts with what it should be
+  const tokens = r.tokens.map((x, i) => {
+    const f = fix.tokens[i];
+    if (!f) return x;
+    if (text || !f.t || f.t.toLowerCase() === x.t.toLowerCase()) return { ...x, ...f };
+    return { ...x, ...f, t: x.t, why: `${x.t} → ${f.t}. ${f.why || ''}`.trim() };
+  });
   return { ...r, ...(text && fix.translation ? { translation: fix.translation } : {}), tokens };
 }
 
