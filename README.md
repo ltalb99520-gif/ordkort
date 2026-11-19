@@ -4,14 +4,14 @@
 
 # Ordkort
 
-**Flashcards, a real dictionary and grammar for 60 languages.**<br>
+**Flashcards, a real dictionary and grammar for 165 languages.**<br>
 Free · no sign-up · no ads · no tracking · works offline
 
 [**Open ordkort.com →**](https://ordkort.com) &nbsp;·&nbsp; [About](https://ordkort.com/en/) &nbsp;·&nbsp; [Contributing](CONTRIBUTING.md) &nbsp;·&nbsp; [Report a problem](https://github.com/silicq/ordkort/issues/new/choose)
 
 [![Tests](https://github.com/silicq/ordkort/actions/workflows/test.yml/badge.svg)](https://github.com/silicq/ordkort/actions/workflows/test.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
-[![Languages](https://img.shields.io/badge/languages-60-orange)](https://ordkort.com)
+[![Languages](https://img.shields.io/badge/languages-165-orange)](https://ordkort.com)
 
 <img src="docs/demo.gif" width="300" alt="A study session: a Norwegian card turns over to its translation and an example, then the next card comes in">
 
@@ -117,7 +117,7 @@ Ordkort is a lightweight site for learning almost any language from almost any o
   After a deploy the app notices the new version by itself — also when it is installed on a phone
   and only woken up — and loads it at the next move to another screen.
 - **Report a mistake** on any AI entry; after independent reports it is regenerated for everyone.
-- **60 languages** to learn and explain in. The interface is hand-translated into English, Russian,
+- **165 languages** to learn and explain in. The interface is hand-translated into English, Russian,
   Ukrainian, Norwegian, Arabic (RTL) and Chinese; other interface languages are translated once by AI
   and shared.
 
@@ -143,7 +143,7 @@ when you agree. It never sees or changes your cards.
 
 | Tool | What it does |
 |---|---|
-| `list_languages` | The 60 languages and their codes |
+| `list_languages` | The 165 languages and their codes |
 | `list_topics` | The built-in topics and their ids |
 | `ready_words` | Words from the shared bank for a topic and level, checked against dictionaries |
 | `find_pictures` | Free pictures for a word in its language: the Wikidata item's Commons picture first, then Pixabay's and Openverse's, with their credits |

@@ -48,3 +48,18 @@ test('a dictionary note is in the learner’s language, as far as the letters te
   assert.equal(L.readable('Et intetkjønnsord.', 'en', 'nb'), true, 'one script for both: nothing to tell');
   assert.equal(L.readable('', 'ru', 'zh'), true);
 });
+
+test('every language has a unique code, and the scripts of the newer ones are told apart', () => {
+  const codes = L.list.map((l) => l.code);
+  assert.equal(new Set(codes).size, codes.length);
+  for (const c of ['cy', 'ga', 'gd', 'se', 'smj', 'sma', 'zu', 'yo', 'ha', 'af', 'wo', 'kab', 'zgh', 'grc', 'tlh']) assert.ok(L.has(c), c);
+  assert.equal(L.scriptOfLang('te'), 'Telugu');
+  assert.equal(L.scriptOfLang('zgh'), 'Tifinagh');
+  assert.equal(L.scriptOfLang('cy'), 'Latin');
+  assert.equal(L.guess(['ⴰⵣⵓⵍ']), 'zgh');
+  assert.equal(L.guess(['నమస్కారం']), 'te');
+  assert.equal(L.guess(['Selaiduvvon đoahttu'], ['se']), 'se');
+  assert.equal(L.guess(['Здраво ѓубре']), 'mk');
+  assert.equal(L.rtl('yi'), true);
+  assert.equal(L.rtl('ug'), true);
+});
