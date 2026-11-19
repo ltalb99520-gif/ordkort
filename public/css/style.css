@@ -389,6 +389,9 @@ textarea.input { resize: vertical; min-height: 64px; line-height: 1.45; }
 }
 [dir='rtl'] .select { background-position: left 10px center; }
 .select.narrow { min-width: 96px; }
+/* the open list is drawn by the system from the options' own colours: without these it takes the field's light text
+   on a white list in the dark theme (and on a transparent field, as in the translator's bar) */
+select option, select optgroup { background-color: var(--card); color: var(--ink); }
 
 .switch {
   appearance: none;
@@ -523,7 +526,8 @@ textarea.input { resize: vertical; min-height: 64px; line-height: 1.45; }
 .pair:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--line-2); }
 .pair-from { color: var(--ink-3); font-size: 12px; letter-spacing: 0.06em; }
 .pair .ico-arrow { color: var(--ink-3); }
-.pair-to { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* a line tall enough for the tails of "y", "g", "ç": the overflow that ends a long name in "…" would cut them off */
+.pair-to { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.35; }
 .pair .ico-chevron { color: var(--ink-3); }
 .pair-dot { width: 8px; height: 8px; margin-inline-start: -2px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
 

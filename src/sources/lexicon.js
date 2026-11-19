@@ -5,7 +5,7 @@
    Not every deploy has it (it is made before a deploy, not kept in git) and not every language is in it: then
    `entry` answers undefined and the checks ask Wikimedia as before. null means the language is there and the word is
    not: Wiktionary has no such word (as of the lexicon's date). */
-import { plain } from './wiktionary.js';
+import { plain, unmarked } from './wiktionary.js';
 
 // Wiktionary's codes where they differ from ours (as in scripts/lexicon.mjs)
 const WIKT = { sr: 'sh', hr: 'sh', bs: 'sh', prs: 'fa' };
@@ -81,6 +81,83 @@ export async function entry(env, lang, word, pos) {
 export async function knows(env, lang, word) {
   const list = await lookup(env, lang, word);
   return list ? list.length > 0 : undefined;
+}
+
+/* What a word means, in English: its glosses (of this part of speech, when one is given) and the English words whose
+   translation tables give it ("масло": butter, oil; "mánnu": moon, month) → a Set of English texts, empty when the
+   lexicon has nothing on the word, undefined without a lexicon for the language. English is itself. */
+export async function english(env, lang, word, pos) {
+  if (lang === 'en') return new Set([String(word).trim()]);
+  const list = await lookup(env, lang, word);
+  if (!list) return undefined;
+  const out = new Set();
+  for (const x of list) {
+    for (const e of x.x || []) out.add(e);
+    if (x.s && (!pos || x.p === pos)) for (const s of x.s) out.add(s);
+  }
+  // a form brings what its word means ("fwyd" → bwyd: food)
+  const of = !out.size && list.find((x) => x.of && (!pos || x.p === pos))?.of?.[0];
+  if (of) for (const s of await english(env, lang, of, pos)) out.add(s);
+  return out;
+}
+
+/* What the lexicon says about words, one short line each, as ground for the AI: "blynedd - noun (f); blynedd f; year
+   (count form)". Words it does not have are left out; at most `max` lines. */
+export async function facts(env, lang, words, max = 30) {
+  const out = [], seen = new Set();
+  for (const w of words) {
+    const word = String(w || '').trim();
+    if (!word || seen.has(word.toLowerCase()) || out.length >= max) continue;
+    seen.add(word.toLowerCase());
+    const list = await lookup(env, lang, word);
+    if (!list) return out; // no lexicon for the language
+    let hits = list.filter((x) => x.p && !x.of);
+    if (!hits.length) {
+      const of = list.find((x) => x.of)?.of?.[0];
+      if (of) hits = ((await lookup(env, lang, of)) || []).filter((x) => x.p && !x.of);
+    }
+    for (const x of hits.slice(0, 2)) {
+      if (seen.has(x.w + '|' + x.p)) continue;
+      seen.add(x.w + '|' + x.p);
+      const forms = x.h ? '' : (x.f || []).slice(0, 4).join(', ');
+      out.push(`${x.w} - ${x.p}${x.g ? ` (${x.g})` : ''}${x.h ? `; ${x.h}` : ''}${forms ? `; forms: ${forms}` : ''}${x.s?.length ? `; ${x.s.slice(0, 2).join('; ')}` : ''}`);
+    }
+  }
+  return out;
+}
+
+// the words that carry the meaning of English glosses and translations: "to eat (food)" → eat, food
+const STOP = new Set(['to', 'a', 'an', 'the', 'of', 'be', 'one', 'someone', 'something', 'somebody', 'oneself', 'in', 'on', 'at',
+  'for', 'with', 'by', 'or', 'and', 'as', 'from', 'that', 'which', 'who', 'some', 'any', 'very', 'its', 'it', 'is', 'are', 'not',
+  'usually', 'especially', 'etc', 'eg', 'ie', 'also', 'used', 'kind', 'type', 'sort', 'act', 'state', 'quality', 'into', 'up', 'out']);
+export function meaningWords(texts) {
+  const out = new Set();
+  for (const t of texts) {
+    for (const w of String(t).toLowerCase().replace(/\([^)]*\)/g, ' ').split(/[^\p{L}\p{M}'-]+/u)) {
+      if (w.length < 2 || STOP.has(w)) continue;
+      out.add(w);
+      // plurals and verb forms of glosses: "eats", "cats" → eat, cat
+      if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) out.add(w.slice(0, -1));
+    }
+  }
+  return out;
+}
+
+/* Words of a language for English words, from the translation tables of English entries ("water" -> se čáhci):
+   [{ word, en }], or undefined without a lexicon of English */
+export async function fromEnglish(env, lang, words) {
+  const code = codeOf(lang), out = [], seen = new Set();
+  for (const en of words) {
+    const list = await lookup(env, 'en', en);
+    if (!list) return undefined;
+    for (const x of list) {
+      for (const t of x.tr?.[code] || []) {
+        const w = unmarked(t, lang);
+        if (!seen.has(w)) { seen.add(w); out.push({ word: w, en }); }
+      }
+    }
+  }
+  return out;
 }
 
 // the files of the lexicon read by the tests, without the network: forget what this isolate has read

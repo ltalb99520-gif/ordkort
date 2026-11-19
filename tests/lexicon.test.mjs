@@ -3,7 +3,7 @@
 // cut-down copies of real kaikki.org lines (Northern Sami and Welsh).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compact, build } from '../scripts/lexicon.mjs';
+import { compact, build, translations } from '../scripts/lexicon.mjs';
 import * as L from '../src/sources/lexicon.js';
 import { check } from '../src/sources/wiktionary.js';
 import { App } from '../src/core/shared.js';
@@ -23,13 +23,25 @@ const LINES = {
     { pos: 'noun', word: 'fwyd', lang_code: 'cy', senses: [{ form_of: [{ word: 'bwyd' }], glosses: ['soft mutation of bwyd'], tags: ['form-of'] }] },
     { pos: 'noun', word: 'coffi', lang_code: 'cy', senses: [{ glosses: ['coffee'], tags: ['masculine'] }] },
   ],
+  ru: [
+    { pos: 'noun', word: 'еда́', lang_code: 'ru', senses: [{ glosses: ['food'] }] },
+  ],
+  // English entries: their translation tables tell what words of other languages mean
+  en: [
+    { pos: 'noun', word: 'moon', lang_code: 'en', senses: [{ glosses: ['the Moon'] }], translations: [{ lang_code: 'se', word: 'mánnu' }, { lang_code: 'ru', word: 'луна́' }] },
+    { pos: 'noun', word: 'butter', lang_code: 'en', senses: [{ glosses: ['a dairy product'] }], translations: [{ lang_code: 'ru', word: 'ма́сло' }, { lang_code: 'se', word: 'vuodja' }] },
+    { pos: 'noun', word: 'oil', lang_code: 'en', senses: [{ glosses: ['liquid fat'] }], translations: [{ lang_code: 'ru', word: 'ма́сло' }] },
+    { pos: 'noun', word: 'food', lang_code: 'en', senses: [{ glosses: ['what is eaten'] }], translations: [{ lang_code: 'se', word: 'biebmu' }, { lang_code: 'ru', word: 'пи́ща' }, { lang_code: 'xx', word: 'nope' }] },
+  ],
 };
 
 // the files the build writes, served as a Worker's static assets are
 function assets() {
   const files = new Map();
+  const wanted = new Set(Object.keys(LINES));
+  const tables = LINES.en.flatMap((e) => translations(e, wanted));
   for (const [code, lines] of Object.entries(LINES)) {
-    const { shards } = build(lines.map(compact).filter(Boolean), code);
+    const { shards } = build([...lines.map(compact).filter(Boolean), ...tables.filter(([c]) => c === code).map(([, x]) => x)], code);
     shards.forEach((s, i) => files.set(`/lex/${code}/${i}.json`, JSON.stringify(s)));
     files.set(`/lex/${code}/meta.json`, JSON.stringify({ n: shards.length }));
   }
@@ -38,6 +50,24 @@ function assets() {
     reads,
     ASSETS: { fetch: async (req) => { const p = new URL(req.url).pathname; reads.push(p); return files.has(p) ? new Response(files.get(p)) : new Response('', { status: 404 }); } },
   };
+}
+
+// one database for the file: initDB makes the schema once per process
+let db1;
+async function database() {
+  if (db1) return db1;
+  const { default: initSqlJs } = await import('sql.js');
+  const { initDB } = await import('../src/core/db.js');
+  const SQL = await initSqlJs();
+  const db = new SQL.Database();
+  const stmt = (sql, args = []) => ({
+    first: async () => { const s = db.prepare(sql); s.bind(args); const row = s.step() ? s.getAsObject() : null; s.free(); return row; },
+    all: async () => { const s = db.prepare(sql); s.bind(args); const results = []; while (s.step()) results.push(s.getAsObject()); s.free(); return { results }; },
+    run: async () => { db.run(sql, args); return { meta: { changes: db.getRowsModified() } }; },
+  });
+  db1 = { prepare: (sql) => ({ ...stmt(sql), bind: (...a) => stmt(sql, a) }), batch: async (list) => { for (const p of list) await p.run(); return []; } };
+  await initDB(db1);
+  return db1;
 }
 
 test('an entry made small: word, class, gender, headword line, forms without the extractor’s notes, IPA, glosses', () => {
@@ -86,18 +116,8 @@ test('a card is checked against the lexicon without asking Wiktionary: forms it 
 
 test('the bank: the AI’s Northern Sami words are looked up, adjectives too, and an answer of mostly invented words is not shared', async () => {
   L.forget();
-  const { default: initSqlJs } = await import('sql.js');
-  const { initDB } = await import('../src/core/db.js');
   const api = await import('../src/ai/routes.js');
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
-  const stmt = (sql, args = []) => ({
-    first: async () => { const s = db.prepare(sql); s.bind(args); const row = s.step() ? s.getAsObject() : null; s.free(); return row; },
-    all: async () => { const s = db.prepare(sql); s.bind(args); const results = []; while (s.step()) results.push(s.getAsObject()); s.free(); return { results }; },
-    run: async () => { db.run(sql, args); return { meta: { changes: db.getRowsModified() } }; },
-  });
-  const DB = { prepare: (sql) => ({ ...stmt(sql), bind: (...a) => stmt(sql, a) }), batch: async (list) => { for (const p of list) await p.run(); return []; } };
-  await initDB(DB);
+  const DB = await database();
   const env = { DB, GROQ_API_KEY: 'k', GROQ_MODELS: 'lex1', ...assets() };
   const topic = App.topics.list[0].id;
   // as the bank of 2026-11-19 had them: real words with wrong meanings, and invented ones
@@ -119,5 +139,88 @@ test('the bank: the AI’s Northern Sami words are looked up, adjectives too, an
     assert.equal(by.mánnu.nf, undefined);
     const row = await DB.prepare('SELECT count(*) AS n FROM words').first();
     assert.equal(row.n, 0, 'most of what a dictionary could judge is not in it: nothing shared');
+  } finally { globalThis.fetch = real; }
+});
+
+test('a translation is compared with what the word means: "mánnu" is the moon, not butter; "biebmu" is food', async () => {
+  L.forget();
+  const env = assets();
+  assert.deepEqual(translations(LINES.en[3], new Set(['se', 'ru'])), [['se', { t: 'biebmu', x: 'food' }], ['ru', { t: 'пи́ща', x: 'food' }]], 'only languages of the site');
+  assert.deepEqual([...await L.english(env, 'ru', 'масло')].sort(), ['butter', 'oil'], 'stress marks are no part of the spelling');
+  assert.deepEqual([...await L.english(env, 'se', 'mánnu', 'noun')].sort(), ['month', 'moon'], 'its glosses and the English word whose table gives it');
+  assert.deepEqual([...L.meaningWords(['to eat (food)', 'the Moon', 'cats'])].sort(), ['cat', 'cats', 'eat', 'moon']);
+  const api = await import('../src/ai/routes.js');
+  const DB = await database();
+  const real = globalThis.fetch;
+  const ai = [['mánnu', 'масло'], ['biebmu', 'еда, пища'], ['čáhci', 'вода']].map(([term, tr]) => ({ term, tr, pos: 'noun', gram: '', forms: '', pron: '', ex: '', ex_tr: '' }));
+  globalThis.fetch = async (url) => {
+    if (!String(url).includes('groq')) throw new TypeError('offline');
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ words: ai }) } }] }), { status: 200 });
+  };
+  try {
+    const req = new Request('https://ordkort.test/api/words', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'se', native: 'ru', topic: App.topics.list[0].id, level: 'A1', n: 5 }) });
+    const out = await (await api.words(req, { DB, GROQ_API_KEY: 'k', GROQ_MODELS: 'lex2', ...env }, 'ante.home')).json();
+    const by = Object.fromEntries(out.words.map((w) => [w.term, w]));
+    assert.equal(by.mánnu.tm, 1, 'moon, month against butter, oil');
+    assert.equal(by.biebmu.tm, undefined, 'food');
+    assert.equal(by.biebmu.mc, 1);
+    assert.equal(by.čáhci.tm, undefined, 'the lexicon knows nothing of "вода" here: cannot tell, left as it is');
+    assert.equal(api.verified(by.mánnu), false);
+  } finally { globalThis.fetch = real; }
+});
+
+test('a topic’s words in a language the AI knows little come from the dictionary: English words of the topic lead to real ones', async () => {
+  L.forget();
+  const env = assets();
+  // English entries keep their translations (scripts/lexicon.mjs split): tr: { se: ["čáhci"] }
+  const water = { ...compact({ pos: 'noun', word: 'water', lang_code: 'en', senses: [{ glosses: ['a liquid'] }] }), tr: { se: ['čáhci'], ru: ['вода́'] } };
+  const { shards } = build([water], 'en');
+  const files = new Map(shards.map((s, i) => [`/lex/en/${i}.json`, JSON.stringify(s)]));
+  files.set('/lex/en/meta.json', JSON.stringify({ n: shards.length }));
+  const inner = env.ASSETS.fetch;
+  env.ASSETS.fetch = async (req) => { const p = new URL(req.url).pathname; return files.has(p) ? new Response(files.get(p)) : inner(req); };
+  assert.deepEqual(await L.fromEnglish(env, 'se', ['water', 'fire']), [{ word: 'čáhci', en: 'water' }]);
+  assert.deepEqual(await L.fromEnglish(env, 'ru', ['water']), [{ word: 'вода', en: 'water' }], 'without the stress mark dictionaries add');
+  const { wordsPrompt } = await import('../src/ai/prompts.js');
+  const p = wordsPrompt({ target: 'se', native: 'ru', topic: 'Food', level: 'A1', n: 5, avoid: [], dict: [{ word: 'čáhci', en: 'water' }] });
+  assert.match(p.user, /ONLY from this list of real Northern Sámi words.*čáhci = water/s);
+  assert.doesNotMatch(wordsPrompt({ target: 'se', native: 'ru', topic: 'Food', level: 'A1', n: 5, avoid: [] }).user, /ONLY from this list/);
+});
+
+test('the translator’s analysis is checked against the dictionary: a numeral before a feminine noun, a count form taken for a plural', async () => {
+  L.forget();
+  const env = assets();
+  const lines = {
+    cy: [
+      { pos: 'num', word: 'tri', lang_code: 'cy', head_templates: [{ expansion: 'tri m (feminine tair)' }], forms: [{ form: 'tair', tags: ['feminine'] }], senses: [{ glosses: ['three'], tags: ['masculine'] }] },
+      { pos: 'num', word: 'dri', lang_code: 'cy', senses: [{ form_of: [{ word: 'tri' }], glosses: ['soft mutation of tri'] }] },
+      { pos: 'noun', word: 'blynedd', lang_code: 'cy', head_templates: [{ expansion: 'blynedd f' }], senses: [{ glosses: ['year (count form)'], tags: ['feminine'] }] },
+    ],
+  };
+  const { shards } = build(lines.cy.map(compact).filter(Boolean), 'cy');
+  const files = new Map(shards.map((s, i) => [`/lex/cy/${i}.json`, JSON.stringify(s)]));
+  files.set('/lex/cy/meta.json', JSON.stringify({ n: shards.length }));
+  env.ASSETS.fetch = async (req) => { const p = new URL(req.url).pathname; return files.has(p) ? new Response(files.get(p)) : new Response('', { status: 404 }); };
+  const asked = [];
+  const real = globalThis.fetch;
+  const analysis = { source_lang: 'cy', target_lang: 'ru', translation: 'Я жил в Осло три года.', analyzed: 'source', structure: '', rules: [], tips: [], alternatives: [],
+    tokens: [{ t: 'am', lemma: 'am', pos: 'preposition', form: '', why: '' }, { t: 'dri', lemma: 'tri', pos: 'numeral', form: 'числительное', why: 'мягкая мутация' }, { t: 'blynedd', lemma: 'blwyddyn', pos: 'noun', form: 'мн. ч.', why: 'множественное число' }] };
+  const fix = { translation: '', tokens: [{ i: 1, t: 'dair', lemma: 'tri', form: 'числительное, женский род', why: 'Перед существительным женского рода — tair, после am — dair.' }, { i: 2, t: 'blynedd', lemma: 'blynedd', form: 'счётная форма', why: 'Счётная форма после числительных, не множественное число.' }] };
+  globalThis.fetch = async (url, o) => {
+    const body = JSON.parse(o.body);
+    asked.push(body.messages.at(-1).content);
+    const content = asked.length === 1 ? analysis : fix;
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }), { status: 200 });
+  };
+  try {
+    const api = await import('../src/ai/routes.js');
+    const req = new Request('https://ordkort.test/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cy', native: 'ru', from: 'auto', to: 'ru', text: 'Rwyf wedi byw yn Oslo am dri blynedd.' }) });
+    const out = await (await api.translate(req, { DB: await database(), GROQ_API_KEY: 'k', GROQ_MODELS: 'lex3', ...env }, 'ifan.home')).json();
+    assert.equal(asked.length, 2, 'one small check after the analysis');
+    assert.match(asked[1], /blynedd - noun \(f\); blynedd f; year \(count form\)/);
+    assert.match(asked[1], /NOTE: "dri" goes with "blynedd", a feminine noun: the feminine form of tri is tair/);
+    assert.equal(out.tokens[1].t, 'dri', 'the learner’s own word stays as written');
+    assert.match(out.tokens[1].why, /^dri → dair\. /);
+    assert.equal(out.tokens[2].form, 'счётная форма');
   } finally { globalThis.fetch = real; }
 });

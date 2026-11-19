@@ -66,7 +66,14 @@ Ordkort is a lightweight site for learning almost any language from almost any o
   deploy from Wiktionary's data as extracted by [wiktextract](https://github.com/tatuylonen/wiktextract)
   ([kaikki.org](https://kaikki.org), CC BY-SA 4.0): `npm run lexicon` writes it to `public/lex/` (not in git), and
   the Worker reads one small file a word, without asking another site. A word no dictionary has is never called
-  checked, and a list made mostly of such words is not shared in the word bank. Translations
+  checked. The lexicon also keeps the translation tables of English entries, so it knows what a word means in English
+  in any language: a card's translation must share a word with the meaning of its term (Northern Sami "mánnu"
+  translated "масло": moon, month against butter, oil), or it is marked as not what the word means. A list made mostly
+  of such words is not shared in the word bank.
+  For the languages the AI knows less well, the lexicon also leads the AI: a topic's words are chosen from real
+  words of the language that the translation tables give for the English words of the same topic; a translator
+  analysis is checked once against the headword lines of its words ("blynedd f", "tri m (feminine tair)") and what
+  they contradict is repaired; and a dictionary entry loses the compounds, synonyms and antonyms no dictionary has. Translations
   still come from the AI alone. The note and the origin of an entry are in the learner's language whatever
   language the query is in; where the two are written in different scripts, one the AI wrote in the language
   being learnt is left out rather than shown.

@@ -11,7 +11,7 @@
 //
 // A shard holds the words whose plain spelling (wiktionary.js plain()) hashes to it: { "<plain>": [entry, …] }, an
 // entry being { w: word, p: part of speech, g: genders ("m", "mf"…), h: the headword line ("bwyd m (plural bwydydd)"),
-// f: forms, i: IPA, s: glosses }. Forms of a word that have an entry of their own ("čázi": a form of čáhci) are kept
+// f: forms, i: IPA, s: glosses }, or { x: [English words whose translation tables give it] }. Forms of a word that have an entry of their own ("čázi": a form of čáhci) are kept
 // with the word, and point to it under their own spelling ({ w, p, of: lemma }), so an inflected form is found too.
 import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync, readFileSync } from 'node:fs';
 import { createGunzip } from 'node:zlib';
@@ -45,7 +45,7 @@ const POS = {
 const GENDERS = { masculine: 'm', feminine: 'f', neuter: 'n', common: 'c' };
 // forms that are notes of the extractor, not words
 const JUNK = new Set(['table-tags', 'inflection-template', 'class', 'error-unrecognized-form', 'romanization', 'transliteration']);
-const MAX_FORMS = 48, MAX_GLOSSES = 3, GLOSS = 90, HEAD = 120;
+const MAX_FORMS = 48, MAX_GLOSSES = 3, GLOSS = 90, HEAD = 120, MAX_ENGLISH = 12, MAX_TRANSLATIONS = 3;
 
 /* One wiktextract entry → a compact one, or null for what a learner's card never is (letters, affixes, names) */
 export function compact(e) {
@@ -76,6 +76,22 @@ export function compact(e) {
   return out;
 }
 
+/* The translation tables of an English entry ("water": se čáhci, ru вода, kl imeq…) → [[code, { t: word, x: English
+   word }]]: a word of a language with the English words it translates, so a card's translation can be compared with
+   the meaning of its word in any language, the learner's too */
+export function translations(e, wanted) {
+  if (!POS[e.pos] || POS[e.pos] === 'name' || !e.word) return [];
+  const out = [], seen = new Set();
+  for (const t of e.translations || []) {
+    const code = MERGE[t.lang_code || t.code] || t.lang_code || t.code;
+    const word = String(t.word || '').trim();
+    if (!wanted.has(code) || code === 'en' || !word || word.length > 40 || seen.has(code + word)) continue;
+    seen.add(code + word);
+    out.push([code, { t: word, x: e.word }]);
+  }
+  return out;
+}
+
 async function download() {
   mkdirSync(WORK, { recursive: true });
   const file = join(WORK, 'raw-wiktextract-data.jsonl.gz');
@@ -101,14 +117,26 @@ async function split(files, wanted) {
       if (!line) continue;
       n++;
       if (n % 500000 === 0) console.log(`${n} entries read, ${kept} kept`);
-      // the language code first, without parsing the whole line: most entries are of languages the site has not
-      const m = /"lang_code": ?"([^"]+)"/.exec(line);
-      const code = m && (MERGE[m[1]] || m[1]);
+      // the entry's own language: not the first "lang_code" of the line, which may be one of its translations or
+      // descendants (about one entry in eight)
+      const e = JSON.parse(line);
+      const code = MERGE[e.lang_code] || e.lang_code;
       if (!code || !wanted.has(code)) continue;
-      const c = compact(JSON.parse(line));
+      const put = (lang, x) => {
+        if (!outs.has(lang)) outs.set(lang, createWriteStream(join(tmp, lang + '.jsonl')));
+        outs.get(lang).write(JSON.stringify(x) + '\n');
+      };
+      const tables = code === 'en' ? translations(e, wanted) : [];
+      for (const [lang, x] of tables) put(lang, x);
+      const c = compact(e);
       if (!c) continue;
-      if (!outs.has(code)) outs.set(code, createWriteStream(join(tmp, code + '.jsonl')));
-      outs.get(code).write(JSON.stringify(c) + '\n');
+      // an English word keeps its translations too (tr: { se: ["čáhci"], kl: ["imeq"] }), the words a topic's
+      // list can be made of in a language the AI knows little (src/ai/routes.js dictionaryWords)
+      if (tables.length && !c.of) {
+        c.tr = {};
+        for (const [lang, x] of tables) if ((c.tr[lang] ||= []).length < MAX_TRANSLATIONS) c.tr[lang].push(x.t);
+      }
+      put(code, c);
       kept++;
     }
   }
@@ -123,7 +151,14 @@ export function build(entries, code) {
   const add = (key, x) => { if (!byKey.has(key)) byKey.set(key, []); byKey.get(key).push(x); };
   const words = new Map(); // "word|pos" → entry
   const pointers = [];
+  const english = new Map(); // plain spelling → English words it translates (from English translation tables)
   for (const e of entries) {
+    if (e.t) {
+      const key = plain(e.t, code);
+      if (!english.has(key)) english.set(key, new Set());
+      if (english.get(key).size < MAX_ENGLISH) english.get(key).add(e.x);
+      continue;
+    }
     if (e.of) { pointers.push(e); continue; }
     const k = e.w + '|' + e.p;
     const had = words.get(k);
@@ -133,6 +168,7 @@ export function build(entries, code) {
     if (e.f) had.f = [...new Set([...(had.f || []), ...e.f])].slice(0, MAX_FORMS);
     if (e.s) had.s = [...new Set([...(had.s || []), ...e.s])].slice(0, MAX_GLOSSES + 1);
     had.h ||= e.h; had.i ||= e.i;
+    if (e.tr) for (const [lang, list] of Object.entries(e.tr)) had.tr = { ...had.tr, [lang]: [...new Set([...(had.tr?.[lang] || []), ...list])].slice(0, MAX_TRANSLATIONS) };
   }
   for (const e of words.values()) add(plain(e.w, code), e);
   for (const ptr of pointers) {
@@ -144,6 +180,7 @@ export function build(entries, code) {
     const key = plain(ptr.w, code);
     if (!byKey.get(key)?.some((x) => !x.of && x.p === ptr.p)) add(key, { w: ptr.w, p: ptr.p, of: ptr.of });
   }
+  for (const [key, x] of english) if (key) add(key, { x: [...x] });
   const size = [...byKey].reduce((t, [k, v]) => t + k.length + JSON.stringify(v).length + 4, 0);
   const n = Math.max(1, Math.ceil(size / SHARD_BYTES));
   const shards = Array.from({ length: n }, () => ({}));
