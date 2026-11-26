@@ -10,6 +10,8 @@ globalThis.App.i18nData.nb = {
   'pair.title': 'Språk jeg lærer',
   'pair.hint': 'Hvert språk har egne kortstokker og egen fremgang. Forklaringene er på {lang}.',
   'pair.add': 'Lær et nytt språk',
+  'pair.remove': "Fjern",
+  'pair.remove_confirm': "Fjerne {lang} fra listen? Kort og fremgang beholdes. Legg til språket igjen for å gjenopprette det.",
   'pair.due': '{n} å repetere',
   'pair.due_elsewhere': 'Det venter ord til repetisjon i et annet språk',
   'theme.toggle': 'Bytt mellom lyst og mørkt tema',
