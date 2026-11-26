@@ -18,11 +18,12 @@ const WEEK = 7 * 864e5;
 const h32 = async (s) => (await sha256(s)).slice(0, 32);
 
 /* Cache keys — one place, so that reports can find exactly the entry that was served */
+const dialectTarget = (target) => target === 'es' ? 'es-cl-v1' : target;
 const KEYS = {
-  lookup: async (t, n, b) => `d1:${t}:${n}:${await h32(str(b.q, 60).toLowerCase())}`,
-  chapter: async (t, n, b) => `g1:${t}:${n}:${b.id}`,
-  ask: async (t, n, b) => `a1:${t}:${n}:${await h32(str(b.q, 300).toLowerCase())}`,
-  translate: async (t, n, b) => `t1:${t}:${n}:${b.from === 'auto' ? 'auto' : lang(b.from)}:${lang(b.to)}:${await h32(str(b.text, 600))}`,
+  lookup: async (t, n, b) => `d1:${dialectTarget(t)}:${n}:${await h32(str(b.q, 60).toLowerCase())}`,
+  chapter: async (t, n, b) => `g1:${dialectTarget(t)}:${n}:${b.id}`,
+  ask: async (t, n, b) => `a1:${dialectTarget(t)}:${n}:${await h32(str(b.q, 300).toLowerCase())}`,
+  translate: async (t, n, b) => `t1:${dialectTarget(t)}:${n}:${b.from === 'auto' ? 'auto' : lang(b.from)}:${lang(b.to)}:${await h32(str(b.text, 600))}`,
 };
 async function groupOf(b, target, native) {
   const level = LEVELS.includes(b.level) ? b.level : 'A1';
@@ -31,7 +32,7 @@ async function groupOf(b, target, native) {
   if (!tp && !custom) throw new HttpError(400, 'bad_topic');
   // phrases for a situation are a bank of their own, apart from the words for the same text
   const phrases = !tp && b.phrases === true;
-  return { tp, custom, level, phrases, grp: `${target}:${native}:${tp ? tp.id : (phrases ? 'p:' : 'c:') + (await h32(norm(custom)))}:${level}` };
+  return { tp, custom, level, phrases, grp: `${dialectTarget(target)}:${native}:${tp ? tp.id : (phrases ? 'p:' : 'c:') + (await h32(norm(custom)))}:${level}` };
 }
 
 const quotaHeaders = (q) => (q ? { 'X-AI-Left': String(q.left), 'X-AI-Limit': String(q.limit) } : { 'X-Cache': 'hit' });
@@ -294,9 +295,9 @@ const deckTopic = (b) => {
 async function topicGroups(b, target, native) {
   if (typeof b.topic !== 'string' || !b.topic.trim()) return [];
   const tp = App.topics.get(b.topic);
-  if (tp) return [`${target}:${native}:${tp.id}:`];
+  if (tp) return [`${dialectTarget(target)}:${native}:${tp.id}:`];
   const h = await h32(norm(str(b.topic, 80)));
-  return [`${target}:${native}:c:${h}:`, `${target}:${native}:p:${h}:`];
+  return [`${dialectTarget(target)}:${native}:c:${h}:`, `${dialectTarget(target)}:${native}:p:${h}:`];
 }
 export async function fill(request, env, key) {
   const b = await readJSON(request, 4000);
@@ -318,7 +319,7 @@ export async function fill(request, env, key) {
    Up to 20 cards in one request, which counts as one generation. A word the shared bank already has, or one
    someone filled in before (the same word and translation), costs nothing: it comes from there. */
 const FILL_MAX = 20;
-const fillKey = async (target, native, w, topic) => 'fill1:' + (await sha256([target, native, norm(w.term), norm(w.tr), ...(topic ? [norm(topic)] : [])].join('\n'))).slice(0, 32);
+const fillKey = async (target, native, w, topic) => 'fill1:' + (await sha256([dialectTarget(target), native, norm(w.term), norm(w.tr), ...(topic ? [norm(topic)] : [])].join('\n'))).slice(0, 32);
 export async function fillMany(request, env, key) {
   const b = await readJSON(request, 20000);
   const { target, native } = pairOf(b);
@@ -338,7 +339,7 @@ export async function fillMany(request, env, key) {
     // the word as the bank has it for the deck's own topic first (elsewhere it may mean another thing), then any
     const own = new Set(await topicGroups(b, target, native));
     const rows = (await env.DB.prepare(`SELECT norm, grp, data FROM words WHERE norm IN (${norms.map(() => '?').join(',')}) AND grp >= ? AND grp < ?`)
-      .bind(...norms, `${target}:${native}:`, `${target}:${native};`).all()).results || [];
+       .bind(...norms, `${dialectTarget(target)}:${native}:`, `${dialectTarget(target)}:${native};`).all()).results || [];
     const mine = (r) => [...own].some((g) => r.grp.startsWith(g));
     const bank = new Map(rows.sort((x, y) => mine(x) - mine(y)).map((r) => [r.norm, JSON.parse(r.data)])); // the deck's own row last: it wins
     for (const i of bankable) {
