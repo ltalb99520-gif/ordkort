@@ -83,14 +83,26 @@
     const pairs = A.store.pairs();
     if (!pairs.some((p) => p.target === s.target)) pairs.unshift({ target: s.target, native: s.native, count: 0, due: 0 });
     const list = h('div', { class: 'pair-list' }, pairs.map((p) =>
-      h('button', {
-        class: 'pair-row' + (p.target === s.target ? ' on' : ''), type: 'button',
-        onclick: () => { m.close(); switchTarget(p.target); },
-      },
-        h('span', { class: 'pair-hello serif', lang: p.target }, A.langs.get(p.target).hello),
-        h('span', { class: 'pair-name' }, A.langs.name(p.target),
-          h('small', null, A.tn('n_words', p.count), p.due ? h('b', { class: 'pair-due' }, t('pair.due', { n: p.due })) : null)),
-        p.target === s.target ? icon('check') : null)));
+      h('div', { class: 'row gap', style: 'align-items:center;min-width:0' },
+        h('button', {
+          class: 'pair-row' + (p.target === s.target ? ' on' : ''), type: 'button', style: 'flex:1;min-width:0',
+          onclick: () => { m.close(); switchTarget(p.target); },
+        },
+          h('span', { class: 'pair-hello serif', lang: p.target }, A.langs.get(p.target).hello),
+          h('span', { class: 'pair-name' }, A.langs.name(p.target),
+            h('small', null, A.tn('n_words', p.count), p.due ? h('b', { class: 'pair-due' }, t('pair.due', { n: p.due })) : null)),
+          p.target === s.target ? icon('check') : null),
+        p.target !== s.target ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button',
+          'aria-label': t('pair.remove') + ': ' + A.langs.name(p.target),
+          onclick: async () => {
+            m.close();
+            if (await A.confirm(t('pair.remove_confirm', { lang: A.langs.name(p.target) }), { ok: t('pair.remove') })) {
+              A.store.archivePair(p.target);
+              route();
+            }
+            pairDialog();
+          }
+        }, t('pair.remove')) : null)));
 
     const grid = h('div', { class: 'lang-grid compact', hidden: true },
       A.langs.list.filter((l) => l.code !== s.native && !pairs.some((p) => p.target === l.code)).map((l) =>
@@ -107,7 +119,7 @@
     }
   }
   function switchTarget(code) {
-    A.store.set({ target: code });
+    A.store.activatePair(code);
     location.hash = '#/';
     route();
   }
