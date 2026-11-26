@@ -310,7 +310,7 @@
                 });
                 details.append(status, sel);
                 if (s.target === 'es') details.append(h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
-                details.append(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('set.voice_system'), onclick: () => { A.voice.refresh(); signature = null; repaint(); } }, '↻ ', t('set.voice_system')));
+                details.append(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('set.voice_refresh'), onclick: () => { A.voice.refresh(); signature = null; repaint(); } }, '↻ ', t('set.voice_refresh')));
               };
               const seg = A.segmented([
                 { value: 'site', label: t('set.voice_site') },
