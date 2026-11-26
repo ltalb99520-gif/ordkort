@@ -45,7 +45,7 @@
       const fits = list(voices, lang);
       const exact = fits.filter((v) => tag(v) === 'es-cl');
       if (exact.length) return forLang(exact, lang);
-      const latam = fits.filter((v) => /^es-(?!es$)[a-z]{2}$/.test(tag(v)));
+      const latam = fits.filter((v) => /^es-(?:419|ar|bo|co|cr|cu|do|ec|gt|hn|mx|ni|pa|pe|pr|py|sv|uy|ve)$/.test(tag(v)));
       return forLang(latam, lang) || forLang(fits, lang);
     }
     if (usesSite(settings?.voice, lang)) return forLang(voices, lang);
