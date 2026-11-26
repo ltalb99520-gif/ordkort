@@ -10,6 +10,8 @@ globalThis.App.i18nData.zh = {
   'pair.title': '我在学的语言',
   'pair.hint': '每种语言都有独立的卡组和进度。讲解使用：{lang}。',
   'pair.add': '再学一种语言',
+  'pair.remove': "移除",
+  'pair.remove_confirm': "将 {lang} 从学习列表移除？卡组和学习进度会保留，重新添加该语言即可恢复。",
   'pair.due': '{n} 个待复习',
   'pair.due_elsewhere': '其他语言有待复习的单词',
   'theme.toggle': '切换浅色 / 深色主题',
