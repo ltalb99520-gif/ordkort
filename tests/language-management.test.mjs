@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { browser } from './helpers.mjs';
+const fresh=()=>{const S=browser(['public/js/store.js']).App.store; S.init({native:'zh',target:'es'});return S;};
+const snap=S=>JSON.parse(JSON.stringify(S.snapshot()));
+test('inactive language can be removed and restored without deleting its decks',()=>{
+  const S=fresh();
+  S.activatePair('en');
+  const d=S.addDeck({title:'English'});
+  S.activatePair('es');
+  assert.equal(S.archivePair('es'),false);
+  assert.equal(S.archivePair('en'),true);
+  assert.equal(S.pairs().some(p=>p.target==='en'),false);
+  assert.equal(S.allPairs['en:zh'].decks[d.id].title,'English');
+  S.activatePair('en');
+  assert.equal(S.pairs().some(p=>p.target==='en'),true);
+  assert.equal(S.deck(d.id).title,'English');
+});
+test('archive metadata survives stale sync and restoration wins over older removal',()=>{
+  const A=fresh();A.activatePair('en');A.activatePair('es');
+  const old=snap(A);
+  const B=fresh();B.merge(old);
+  assert.equal(A.archivePair('en'),true);
+  const hidden=snap(A);
+  B.merge(hidden);
+  assert.equal(B.pairs().some(p=>p.target==='en'),false);
+  B.merge(old);
+  assert.equal(B.pairs().some(p=>p.target==='en'),false);
+  B.activatePair('en');B.activatePair('es');
+  A.merge(snap(B));
+  assert.equal(A.pairs().some(p=>p.target==='en'),true);
+});
