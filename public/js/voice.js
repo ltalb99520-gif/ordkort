@@ -6,8 +6,28 @@
   const DEVICE = 'system';
   const CHILE = 'chile';
   const NEURAL = 'neural';
+  const CLOUD = Object.freeze({
+    es: ['catalina','lorenzo','es-ES-ElviraNeural','es-MX-DaliaNeural'],
+    en: ['en-US-JennyNeural','en-US-GuyNeural','en-GB-SoniaNeural','en-AU-NatashaNeural'],
+    zh: ['zh-CN-XiaoxiaoNeural','zh-CN-YunxiNeural'],
+    fr: ['fr-FR-DeniseNeural','fr-CA-SylvieNeural'],
+    pt: ['pt-BR-FranciscaNeural','pt-PT-RaquelNeural'],
+    ja: ['ja-JP-NanamiNeural','ja-JP-KeitaNeural'],
+    ko: ['ko-KR-SunHiNeural','ko-KR-InJoonNeural'],
+    de: ['de-DE-KatjaNeural','de-DE-ConradNeural'],
+    it: ['it-IT-ElsaNeural','it-IT-DiegoNeural'],
+  });
+  function cloudChoices(lang) {
+    return (Object.hasOwn(CLOUD, lang) ? CLOUD[lang] : []).map(id => {
+      const full = id === 'catalina' ? 'es-CL-CatalinaNeural' : id === 'lorenzo' ? 'es-CL-LorenzoNeural' : id;
+      const [language, region, name] = full.split('-');
+      return {id, label: name.replace(/Neural$/, '') + ' — ' + language + '-' + region};
+    });
+  }
   function neural(settings, lang) {
-    return settings?.voice === NEURAL && lang === 'es' ? (settings.neuralVoice === 'lorenzo' ? 'lorenzo' : 'catalina') : '';
+    if (settings?.voice !== NEURAL) return '';
+    const options = cloudChoices(lang);
+    return options.find(v => v.id === settings.neuralVoice)?.id || options[0]?.id || '';
   }
 
   const ALIAS = { nb: ['nb', 'no', 'nn'], nn: ['nn', 'nb', 'no'], zh: ['zh-cn', 'cmn', 'zh'], prs: ['fa-af', 'prs', 'fa'], kmr: ['ku', 'kmr'], tl: ['fil', 'tl'], he: ['he', 'iw'], arz: ['ar-eg', 'ar'], apc: ['ar-lb', 'ar-sy', 'ar'], ary: ['ar-ma', 'ar'], yue: ['zh-hk', 'yue'], gsw: ['gsw', 'de-ch'], bs: ['bs', 'hr'] };
@@ -119,5 +139,5 @@
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, choices, displayChoices, searchChoices, voiceChanges, forLang, resolve, speechPlan, langTag, rate };
+  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, cloudChoices, usesSite, list, choices, displayChoices, searchChoices, voiceChanges, forLang, resolve, speechPlan, langTag, rate };
 })();
