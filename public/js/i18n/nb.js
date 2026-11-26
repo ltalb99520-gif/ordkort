@@ -795,6 +795,8 @@ globalThis.App.i18nData.nb = {
   'set.voice_default': "Systemets standard",
   'set.voice_system': "Enhetens stemme",
   'set.voice_refresh': "Oppdater stemmelisten",
+  'set.voice_all': "Vis alle enhetsstemmer",
+  'set.voice_counts': "Valgt språk: {target} · Alle: {total}",
   'set.voice_chile': "Foretrekk chilensk spansk",
   'set.voice_chile_fallback': "Ber om es-CL; enheten kan bruke en reservestemme.",
   'set.voice_rate': "Talehastighet på enheten",
