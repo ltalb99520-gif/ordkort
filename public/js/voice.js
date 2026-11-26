@@ -24,7 +24,33 @@
   }
 
   function choices(voices, lang) {
-    return [...new Map(list(voices, lang).filter(v => v.voiceURI).map(v => [v.voiceURI, v])).values()];
+    const source = lang ? list(voices, lang) : (voices || []);
+    return [...new Map(source.filter(v => v.voiceURI).map(v => [v.voiceURI, v])).values()];
+  }
+
+  // Same display name can refer to distinct installed voice identifiers.
+  // Retain these choices, but distinguish known quality or number otherwise.
+  function displayChoices(voices, lang) {
+    const entries = choices(voices, lang);
+    const base = v => v.name + ' — ' + v.lang;
+    const quality = v => {
+      const id = String(v.voiceURI);
+      const match = id.match(/(?:^|[. _-])(premium|enhanced|compact|standard|default)(?:$|[. _-])/i);
+      return match ? match[1].toLowerCase() : '';
+    };
+    const seen = new Map();
+    return entries.map(v => {
+      const label = base(v);
+      const same = entries.filter(x => x.name === v.name && tag(x) === tag(v));
+      if (same.length === 1) return { voice: v, label };
+      const q = quality(v);
+      const uniqueQuality = q && same.filter(x => quality(x) === q).length === 1;
+      if (uniqueQuality) return { voice: v, label: label + ' · ' + q };
+      const key = v.name + '\\n' + tag(v);
+      const n = (seen.get(key) || 0) + 1;
+      seen.set(key, n);
+      return { voice: v, label: label + ' · #' + n };
+    });
   }
 
   function forLang(voices, lang) {
@@ -77,5 +103,5 @@
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, choices, forLang, resolve, speechPlan, langTag, rate };
+  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, choices, displayChoices, forLang, resolve, speechPlan, langTag, rate };
 })();
