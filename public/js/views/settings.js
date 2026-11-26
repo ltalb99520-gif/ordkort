@@ -264,6 +264,10 @@
                   const sel = h('select', { class: 'select', 'aria-label': t('set.voice_neural') }, A.voice.cloudChoices(s.target).map(v => h('option', { value: v.id }, v.label)));
                   sel.value = A.voice.neural(s, s.target);
                   sel.disabled = !A.voice.cloudChoices(s.target).length;
+                  const cloudStatus = h('small', { class: 'muted', role: 'status' }, t('set.cloud_checking'));
+                  A.ai.call('tts-status').then(async r => { if (!r.ok) throw Error('status'); const data = await r.json(); cloudStatus.textContent = t(data.configured ? 'set.cloud_configured' : 'set.cloud_unconfigured'); }).catch(() => { cloudStatus.textContent = t('set.cloud_unknown'); });
+                  details.append(cloudStatus);
+                  if (sel.disabled) details.append(h('small', { class: 'muted' }, t('set.cloud_unsupported')));
                   sel.addEventListener('change', () => set({ neuralVoice: sel.value }));
                   details.append(sel, h('small', { class: 'muted' }, t('set.voice_neural_hint')), h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak(A.langs.get(s.target).hello, s.target) }, t('common.listen')));
                   return;
@@ -318,7 +322,7 @@
                 showAll.addEventListener('change', () => { all = showAll.checked; signature = null; repaint(); });
                 search.addEventListener('input', () => { signature = null; repaint(); });
                 details.append(status, scope, search, sel, info);
-                details.append(h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
+                details.append(h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak(A.langs.get(s.target).hello, s.target) }, t('common.listen')));
                 const refresh = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('set.voice_refresh') }, '↻ ', t('set.voice_refresh'));
                 refresh.addEventListener('click', async () => {
                   const before = [...A.voice.now()];
