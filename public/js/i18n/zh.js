@@ -795,7 +795,7 @@ globalThis.App.i18nData.zh = {
   'set.voice_chile_fallback': "请求智利西语 es-CL；设备可能使用备用语音。",
   'set.voice_rate': "设备语音语速",
   'set.voice_rate_hint': "仅影响设备合成语音，不改变录音播放速度。",
-  'set.voice_neural': "智利云端语音",
+  'set.voice_neural': "云端语音",
   'set.voice_neural_hint': "配置后将西语文本发送给 Azure；不可用时改用设备语音。",
   'set.voice_neural_fallback': "云端语音不可用，改用设备语音。",
   'about.voice_h': "卡片的语音",
