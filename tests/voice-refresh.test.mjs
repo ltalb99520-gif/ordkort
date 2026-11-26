@@ -47,12 +47,29 @@ test('device voice list is refreshed, deduplicated and manually selected without
   assert.equal(V.choices([mx,cl,en],'en')[0].voiceURI,'en');
   const src=read('public/js/views/settings.js');
   const block=src.slice(src.indexOf("row(t('set.voice')"),src.indexOf("row(t('set.voice_rate')"));
-  assert.match(block,/A\.voice\.choices\(A\.voice\.now\(\), s\.target\)/);
+  assert.match(block,/A\.voice\.displayChoices\(detected, all \? null : s\.target\)/);
   assert.match(block,/set\(\{ voiceURI: sel\.value \}\)/);
-  assert.match(block,/details\.append\(status, sel\)/);
+  assert.match(block,/details\.append\(status, scope, sel\)/);
   assert.match(block,/A\.voice\.refresh\(\); signature = null; repaint\(\);/);
   assert.match(block,/t\('set\.voice_refresh'\)/);
   assert.doesNotMatch(block,/value: 'chile'|A\.route\(/);
   assert.match(block,/if \(s\.voice === 'chile'\) A\.store\.set\(\{ voice: 'system', voiceURI: '' \}\)/);
   assert.match(block,/value: 'neural', label: t\('set.voice_neural'\)/);
+});
+
+test('same-name voices retain distinct IDs and receive unambiguous labels', () => {
+  const V=browser(['public/js/voice.js']).App.voice;
+  const a={voiceURI:'com.apple.compact.mx',name:'Paulina',lang:'es-MX'};
+  const b={voiceURI:'com.apple.enhanced.mx',name:'Paulina',lang:'es-MX'};
+  const c={voiceURI:'unknown1',name:'Mónica',lang:'es-ES'};
+  const d={voiceURI:'unknown2',name:'Mónica',lang:'es-ES'};
+  const e={voiceURI:'en',name:'English',lang:'en-US'};
+  const entries=[a,b,c,d,e,a];
+  const out=V.displayChoices(entries,'es');
+  assert.equal(out.length,4);
+  assert.equal(new Set(out.map(x=>x.label)).size,4);
+  assert.match(out[0].label,/compact/);
+  assert.match(out[1].label,/enhanced/);
+  assert.equal(V.displayChoices(entries).length,5);
+  assert.equal(V.resolve(entries,{voice:'system',voiceURI:b.voiceURI},'es'),b);
 });
