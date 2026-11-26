@@ -6,8 +6,28 @@
   const DEVICE = 'system';
   const CHILE = 'chile';
   const NEURAL = 'neural';
+  const CLOUD = Object.freeze({
+    es: ['catalina','lorenzo','es-ES-ElviraNeural','es-MX-DaliaNeural'],
+    en: ['en-US-JennyNeural','en-US-GuyNeural','en-GB-SoniaNeural','en-AU-NatashaNeural'],
+    zh: ['zh-CN-XiaoxiaoNeural','zh-CN-YunxiNeural'],
+    fr: ['fr-FR-DeniseNeural','fr-CA-SylvieNeural'],
+    pt: ['pt-BR-FranciscaNeural','pt-PT-RaquelNeural'],
+    ja: ['ja-JP-NanamiNeural','ja-JP-KeitaNeural'],
+    ko: ['ko-KR-SunHiNeural','ko-KR-InJoonNeural'],
+    de: ['de-DE-KatjaNeural','de-DE-ConradNeural'],
+    it: ['it-IT-ElsaNeural','it-IT-DiegoNeural'],
+  });
+  function cloudChoices(lang) {
+    return (Object.hasOwn(CLOUD, lang) ? CLOUD[lang] : []).map(id => {
+      const full = id === 'catalina' ? 'es-CL-CatalinaNeural' : id === 'lorenzo' ? 'es-CL-LorenzoNeural' : id;
+      const [language, region, name] = full.split('-');
+      return {id, label: name.replace(/Neural$/, '') + ' — ' + language + '-' + region};
+    });
+  }
   function neural(settings, lang) {
-    return settings?.voice === NEURAL && lang === 'es' ? (settings.neuralVoice === 'lorenzo' ? 'lorenzo' : 'catalina') : '';
+    if (settings?.voice !== NEURAL) return '';
+    const options = cloudChoices(lang);
+    return options.find(v => v.id === settings.neuralVoice)?.id || options[0]?.id || '';
   }
 
   const ALIAS = { nb: ['nb', 'no', 'nn'], nn: ['nn', 'nb', 'no'], zh: ['zh-cn', 'cmn', 'zh'], prs: ['fa-af', 'prs', 'fa'], kmr: ['ku', 'kmr'], tl: ['fil', 'tl'], he: ['he', 'iw'], arz: ['ar-eg', 'ar'], apc: ['ar-lb', 'ar-sy', 'ar'], ary: ['ar-ma', 'ar'], yue: ['zh-hk', 'yue'], gsw: ['gsw', 'de-ch'], bs: ['bs', 'hr'] };
@@ -72,10 +92,6 @@
   function forLang(voices, lang) {
     const fits = list(voices, lang);
     const preferred = (xs) => xs.find((x) => /natural|neural|online|google|enhanced|premium|siri/i.test(x.name)) || xs[0] || null;
-    if (lang === 'es') {
-      const chilean = fits.filter((v) => tag(v) === 'es-cl');
-      if (chilean.length) return preferred(chilean);
-    }
     return preferred(fits);
   }
 
@@ -91,12 +107,17 @@
   /* The voice to speak `lang` with, or null for "leave u.voice unset": that is the only way to the system default,
      which on iOS is the Siri voice — a voice getVoices() never lists. */
   function resolve(voices, settings, lang) {
-    if ((settings?.voice === CHILE || neural(settings, lang)) && lang === 'es') {
+    if ((settings?.voice === CHILE || ['catalina','lorenzo'].includes(neural(settings, lang))) && lang === 'es') {
       const fits = list(voices, lang);
       const exact = fits.filter((v) => tag(v) === 'es-cl');
       if (exact.length) return forLang(exact, lang);
       const latam = fits.filter((v) => /^es-(?:419|ar|bo|co|cr|cu|do|ec|gt|hn|mx|ni|pa|pe|pr|py|sv|uy|ve)$/.test(tag(v)));
       return forLang(latam, lang) || forLang(fits, lang);
+    }
+    const cloud = neural(settings, lang);
+    if (cloud) {
+      const locale = cloud.split('-').slice(0,2).join('-').toLowerCase();
+      return forLang(list(voices, lang).filter(v => tag(v) === locale), lang) || forLang(voices, lang);
     }
     if (usesSite(settings?.voice, lang)) return forLang(voices, lang);
     const pick = settings?.voiceURI;
@@ -107,9 +128,15 @@
   // An explicit non-Chilean voice would override this locale request.
   function speechPlan(voices, settings, lang) {
     const fallback = resolve(voices, settings, lang);
-    if (lang === 'es' && (settings?.voice === CHILE || neural(settings, lang))) {
+    if (lang === 'es' && (settings?.voice === CHILE || ['catalina','lorenzo'].includes(neural(settings, lang)))) {
       if (fallback && tag(fallback) === 'es-cl') return { voice: fallback, lang: fallback.lang, fallback: null };
       return { voice: null, lang: 'es-CL', fallback };
+    }
+    const cloud = neural(settings, lang);
+    if (cloud) {
+      const locale = cloud.split('-').slice(0,2).join('-');
+      if (fallback && tag(fallback) === locale.toLowerCase()) return { voice: fallback, lang: fallback.lang, fallback: null };
+      return { voice: null, lang: locale, fallback };
     }
     return { voice: fallback, lang: fallback?.lang || langTag(voices, lang), fallback: null };
   }
@@ -119,5 +146,5 @@
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, choices, displayChoices, searchChoices, voiceChanges, forLang, resolve, speechPlan, langTag, rate };
+  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, cloudChoices, usesSite, list, choices, displayChoices, searchChoices, voiceChanges, forLang, resolve, speechPlan, langTag, rate };
 })();

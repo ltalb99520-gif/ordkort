@@ -130,9 +130,33 @@
     state.settings = { ...defaultSettings(), native, target, level: level || 'A1', u: now() };
     save();
   }
+  const VOICE_FIELDS = ['voice','voiceURI','neuralVoice','voiceRate'];
+  function voicePrefs(settings) {
+    return Object.fromEntries(VOICE_FIELDS.filter(k => settings[k] !== undefined).map(k => [k, settings[k]]));
+  }
+  function rememberVoice() {
+    const s = state.settings;
+    const p = pair();
+    p.voicePrefs = { ...voicePrefs(s), u: Math.max(now(), (p.voicePrefs?.u || 0) + 1) };
+  }
+  function restoreVoice() {
+    const s = state.settings;
+    const prefs = pair().voicePrefs || {};
+    for (const k of VOICE_FIELDS) delete s[k];
+    Object.assign(s, { voice: 'site', voiceURI: '', neuralVoice: '', voiceRate: 0.9 });
+    for (const k of VOICE_FIELDS) if (prefs[k] !== undefined) s[k] = prefs[k];
+  }
   function set(patch) {
-    Object.assign(state.settings, patch);
-    if (Object.keys(patch).some((k) => !DEVICE_ONLY.includes(k))) state.settings.u = now();
+    const s = state.settings;
+    const switching = (patch.target !== undefined && patch.target !== s.target) || (patch.native !== undefined && patch.native !== s.native);
+    if (switching) {
+      rememberVoice();
+      Object.assign(s, patch);
+      restoreVoice();
+    }
+    Object.assign(s, patch);
+    if (VOICE_FIELDS.some(k => Object.hasOwn(patch, k))) rememberVoice();
+    if (Object.keys(patch).some((k) => !DEVICE_ONLY.includes(k))) s.u = now();
     save();
   }
   // Archive a language without discarding cards, review history or media.
@@ -150,9 +174,7 @@
     const key = `${target}:${state.settings.native}`;
     const p = (state.pairs[key] ||= { decks: {}, cards: {} });
     if (p.visibility?.hidden) p.visibility = { hidden: false, u: Math.max(now(), p.visibility.u + 1) };
-    state.settings.target = target;
-    state.settings.u = now();
-    save();
+    set({ target });
   }
 
   // every language learnt with the current native one, with how many of its cards wait for a review now
@@ -642,6 +664,9 @@
       const L = (state.pairs[key] ||= { decks: {}, cards: {} });
       L.del ||= {};
       const R = remote.pairs[key] || {};
+      const lp = L.voicePrefs, rp = R.voicePrefs;
+      if (rp && (!lp || rp.u > lp.u)) { L.voicePrefs = { ...rp }; changed = true; }
+      else if (lp && (!rp || lp.u > rp.u)) ahead = true;
       const lv = L.visibility, rv = R.visibility;
       if (rv && (!lv || rv.u > lv.u || (rv.u === lv.u && rv.hidden && !lv.hidden))) {
         L.visibility = { hidden: !!rv.hidden, u: rv.u };
@@ -665,6 +690,8 @@
         }
       }
     }
+
+    if (state.settings && state.pairs[pairKey()]?.voicePrefs) restoreVoice();
 
     // daily stats: take the maximum (so repeated merges never double them), new words per language too
     const most = (lv, rv, f) => {

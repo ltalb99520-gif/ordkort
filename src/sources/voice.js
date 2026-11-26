@@ -16,7 +16,7 @@ import { cacheGet, cacheSet, cacheOf, bump } from '../core/db.js';
 import { takeSimple, takeStore } from '../core/limits.js';
 import { HttpError, str, sha256, readBytes, UA } from '../core/util.js';
 import * as W from './wiktionary.js';
-import { CHILE_VOICES, configured, chileSpeech } from './chile-speech.js';
+import { cloudVoice, configured, chileSpeech } from './chile-speech.js';
 
 const YEAR = 365 * 864e5;
 const MAX_BYTES = 1024 * 1024;
@@ -110,16 +110,20 @@ const answer = (v) => new Response(unb64(v.d), {
 });
 const none = () => new Response(JSON.stringify({ error: 'none' }), { status: 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' } });
 
-async function neuralTts(env, key, text, voice) {
+export function cloudStatus(env) {
+  return Response.json({ configured: configured(env) }, { headers: { 'Cache-Control': 'no-store' } });
+}
+
+async function neuralTts(env, key, text, voice, lang) {
   const unavailable = () => new Response(JSON.stringify({ error: 'none' }), { status: 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   if (!configured(env)) return unavailable();
-  const k = 'tts-cl-v1:' + (await sha256(voice + '\n' + text)).slice(0, 32);
+  const k = (lang === 'es' && ['catalina','lorenzo'].includes(voice) ? 'tts-cl-v1:' : 'tts-cloud-v2:') + (await sha256(voice + '\n' + text)).slice(0, 32);
   const hit = await cacheGet(env.DB, k, YEAR);
   if (hit) return answer(hit);
   await takeSimple(env, 'tts', key, 300, 36e5);
-  const bytes = await chileSpeech(env, text, voice);
+  const bytes = await chileSpeech(env, text, voice, lang);
   if (!bytes) return unavailable();
-  const v = { t: 'audio/mpeg', d: b64(bytes), by: 'Azure Speech: ' + CHILE_VOICES[voice] };
+  const v = { t: 'audio/mpeg', d: b64(bytes), by: 'Azure Speech: ' + cloudVoice(lang, voice) };
   // Cache by voice and exact text; a storage limit must not prevent playback.
   try { await takeStore(env, key, v.d.length); await cacheSet(env.DB, k, v); } catch { /* still serve audio */ }
   return answer(v);
@@ -132,8 +136,8 @@ export async function tts(request, env, key) {
   if (!App.langs.has(lang) || !text) throw new HttpError(400, 'bad_request');
   const neural = u.searchParams.get('neural');
   if (neural !== null) {
-    if (lang !== 'es' || !Object.hasOwn(CHILE_VOICES, neural)) throw new HttpError(400, 'bad_request');
-    return neuralTts(env, key, text, neural);
+    if (!cloudVoice(lang, neural)) throw new HttpError(400, 'bad_request');
+    return neuralTts(env, key, text, neural, lang);
   }
   const k = 'tts1:' + (await sha256(lang + '\n' + text.toLowerCase())).slice(0, 32);
   const hit = await cacheGet(env.DB, k, YEAR);
