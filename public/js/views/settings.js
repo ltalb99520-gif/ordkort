@@ -270,9 +270,8 @@
                 if (s.voice === 'chile' && s.target === 'es') {
                   const status = h('small', { class: 'muted', role: 'status' });
                   repaint = () => {
-                    const v = A.voice.resolve(A.voice.now(), s, 'es');
-                    const exact = v && String(v.lang).toLowerCase().replace('_', '-') === 'es-cl';
-                    status.textContent = [v ? `${v.name} — ${v.lang}` : '', exact ? '' : t('set.voice_chile_fallback')].filter(Boolean).join(' · ');
+                    const plan = A.voice.speechPlan(A.voice.now(), s, 'es');
+                    status.textContent = plan.voice ? `${plan.voice.name} — ${plan.voice.lang}` : [t('set.voice_chile_fallback'), plan.fallback ? `${plan.fallback.name} — ${plan.fallback.lang}` : ''].filter(Boolean).join(' · ');
                   };
                   repaint();
                   details.append(status, h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));

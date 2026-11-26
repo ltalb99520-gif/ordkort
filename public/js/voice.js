@@ -57,10 +57,21 @@
     return pick ? (voices || []).find((v) => v.voiceURI === pick) || null : null;
   }
 
+  // Ask the OS for Chilean speech even when the browser hides installed voices.
+  // An explicit non-Chilean voice would override this locale request.
+  function speechPlan(voices, settings, lang) {
+    const fallback = resolve(voices, settings, lang);
+    if (lang === 'es' && (settings?.voice === CHILE || neural(settings, lang))) {
+      if (fallback && tag(fallback) === 'es-cl') return { voice: fallback, lang: fallback.lang, fallback: null };
+      return { voice: null, lang: 'es-CL', fallback };
+    }
+    return { voice: fallback, lang: fallback?.lang || langTag(voices, lang), fallback: null };
+  }
+
   function langTag(voices, lang) {
     const v = forLang(voices, lang);
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, forLang, resolve, langTag, rate };
+  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, forLang, resolve, speechPlan, langTag, rate };
 })();
