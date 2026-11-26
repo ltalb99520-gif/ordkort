@@ -206,20 +206,20 @@
      or a synthetic one, brought to one level (evened). Kept for the visit by language and text: an object URL, '' when
      the site has none (the system's voice then speaks), or the promise while it loads. */
   const voices = new Map();
-  const vkey = (text, lang) => lang + '\n' + String(text || '').trim().toLowerCase();
-  function voice(text, lang) {
-    const k = vkey(text, lang);
+  const vkey = (text, lang, neural = '') => lang + '\n' + neural + '\n' + (neural ? String(text || '').trim() : String(text || '').trim().toLowerCase());
+  function voice(text, lang, neural = '') {
+    const k = vkey(text, lang, neural);
     if (voices.has(k)) return Promise.resolve(voices.get(k));
-    const p = A.ai.call(`tts?l=${encodeURIComponent(lang)}&q=${encodeURIComponent(String(text).trim().slice(0, 200))}`)
+    const p = A.ai.call(`tts?l=${encodeURIComponent(lang)}&q=${encodeURIComponent(String(text).trim().slice(0, 200))}${neural ? '&neural=' + encodeURIComponent(neural) : ''}`)
       .then((r) => (r.ok ? r.blob() : null))
       .then((b) => (b && /^audio\//.test(b.type) ? evened(b) : null))
-      .then((b) => { const u = b ? URL.createObjectURL(b) : ''; voices.set(k, u); return u; })
+      .then((b) => { const u = b ? URL.createObjectURL(b) : ''; if (u || !neural) voices.set(k, u); else voices.delete(k); return u; })
       .catch(() => { voices.delete(k); return ''; }); // offline: ask again next time
     voices.set(k, p);
     return p;
   }
   // the voice's address when it is ready, '' when there is none, null while unknown or loading
-  const voiceNow = (text, lang) => { const v = voices.get(vkey(text, lang)); return typeof v === 'string' ? v : null; };
+  const voiceNow = (text, lang, neural = '') => { const v = voices.get(vkey(text, lang, neural)); return typeof v === 'string' ? v : null; };
 
   // pictures and recordings no card refers to any more, once in a while
   async function tidy() {
