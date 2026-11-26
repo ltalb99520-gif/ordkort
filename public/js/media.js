@@ -205,14 +205,50 @@
   /* The site's voice for a card without a recording (src/sources/voice.js): a native speaker's recording from Wiktionary,
      or a synthetic one, brought to one level (evened). Kept for the visit by language and text: an object URL, '' when
      the site has none (the system's voice then speaks), or the promise while it loads. */
+  // Store original compressed speech locally for offline replay. This is separate from imported card media,
+  // so neither sync nor media cleanup treats these disposable recordings as learner data.
+  const VOICE_CACHE = 'ordkort-voice-v1';
+  const VOICE_CACHE_MAX = 256, VOICE_CACHE_BYTES = 256 * 1024;
+  async function diskVoiceKey(k) {
+    if (!globalThis.caches || !globalThis.crypto?.subtle || !globalThis.location?.origin) return null;
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(k));
+    const hex = [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    return new URL('/__ordkort_voice/' + hex, location.origin).href;
+  }
+  async function voiceBlob(text, lang, neural, k) {
+    let cache = null, key = null;
+    try {
+      key = await diskVoiceKey(k);
+      if (key) {
+        cache = await caches.open(VOICE_CACHE);
+        const hit = await cache.match(key);
+        if (hit) {
+          const blob = await hit.blob();
+          if (blob.size && blob.size <= VOICE_CACHE_BYTES && /^audio\//.test(blob.type)) return blob;
+          await cache.delete(key);
+        }
+      }
+    } catch { cache = null; } // storage disabled or full: normal online playback still works
+    const res = await A.ai.call(`tts?l=${encodeURIComponent(lang)}&q=${encodeURIComponent(String(text).trim().slice(0, 200))}${neural ? '&neural=' + encodeURIComponent(neural) : ''}`);
+    const blob = res.ok ? await res.blob() : null;
+    if (!blob?.size || !/^audio\//.test(blob.type)) return null;
+    if (cache && key && blob.size <= VOICE_CACHE_BYTES) {
+      try {
+        // Only successful audio is stored; keep the cache bounded and separate from study records.
+        await cache.put(key, new Response(blob, { headers: { 'Content-Type': blob.type } }));
+        const keys = await cache.keys();
+        if (keys.length > VOICE_CACHE_MAX) await Promise.all(keys.slice(0, keys.length - VOICE_CACHE_MAX).map((r) => cache.delete(r)));
+      } catch { /* cache is optional */ }
+    }
+    return blob;
+  }
   const voices = new Map();
   const vkey = (text, lang, neural = '') => lang + '\n' + neural + '\n' + (neural ? String(text || '').trim() : String(text || '').trim().toLowerCase());
   function voice(text, lang, neural = '') {
     const k = vkey(text, lang, neural);
     if (voices.has(k)) return Promise.resolve(voices.get(k));
-    const p = A.ai.call(`tts?l=${encodeURIComponent(lang)}&q=${encodeURIComponent(String(text).trim().slice(0, 200))}${neural ? '&neural=' + encodeURIComponent(neural) : ''}`)
-      .then((r) => (r.ok ? r.blob() : null))
-      .then((b) => (b && /^audio\//.test(b.type) ? evened(b) : null))
+    const p = voiceBlob(text, lang, neural, k)
+      .then((b) => (b ? evened(b) : null))
       .then((b) => { const u = b ? URL.createObjectURL(b) : ''; if (u || !neural) voices.set(k, u); else voices.delete(k); return u; })
       .catch(() => { voices.delete(k); return ''; }); // offline: ask again next time
     voices.set(k, p);
