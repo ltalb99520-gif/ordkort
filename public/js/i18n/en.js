@@ -794,6 +794,7 @@ globalThis.App.i18nData.en = {
   'set.voice_site': "Recordings and site voice",
   'set.voice_default': "System default",
   'set.voice_system': "Device voice",
+  'set.voice_refresh': "Refresh device voices",
   'set.voice_chile': "Chilean Spanish preferred",
   'set.voice_chile_fallback': "Requesting es-CL; the device may use a fallback voice.",
   'set.voice_rate': "Device speech rate",
