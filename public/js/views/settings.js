@@ -102,8 +102,10 @@
   }
 
   A.views.settings = {
-    leave() { A.look.unpreview(); }, // the sample's CSS is only for this page
+    leave() { this.voiceUnsubscribe?.(); this.voiceUnsubscribe = null; A.look.unpreview(); }, // the sample's CSS is only for this page
     render(root) {
+      this.voiceUnsubscribe?.();
+      this.voiceUnsubscribe = null;
       const s = A.store.settings;
       const set = (patch, rerender = false) => { A.store.set(patch); if (rerender) A.route(); else A.toast(t('set.saved')); };
 
@@ -252,48 +254,65 @@
             row(t('set.batch'), t('set.batch_hint'), numSel([10, 20, 30], s.batch, (v) => set({ batch: v }))),
             row(t('set.autospeak'), t('set.autospeak_hint'), toggle(s.autoSpeak, (v) => set({ autoSpeak: v }))),
             row(t('set.voice'), t('set.voice_hint'), (() => {
+              const wrap = h('div', { class: 'voice-pick' });
+              const details = h('div', { class: 'voice-pick' });
+              let repaint = () => {};
+              const draw = () => {
+                repaint = () => {};
+                details.replaceChildren();
+                if (s.voice === 'neural' && s.target === 'es') {
+                  const sel = h('select', { class: 'select', 'aria-label': t('set.voice_neural') }, [h('option', { value: 'catalina' }, 'Catalina — es-CL'), h('option', { value: 'lorenzo' }, 'Lorenzo — es-CL')]);
+                  sel.value = A.voice.neural(s, 'es');
+                  sel.addEventListener('change', () => set({ neuralVoice: sel.value }));
+                  details.append(sel, h('small', { class: 'muted' }, t('set.voice_neural_hint')), h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
+                  return;
+                }
+                if (s.voice === 'chile' && s.target === 'es') {
+                  const status = h('small', { class: 'muted', role: 'status' });
+                  repaint = () => {
+                    const v = A.voice.resolve(A.voice.now(), s, 'es');
+                    const exact = v && String(v.lang).toLowerCase().replace('_', '-') === 'es-cl';
+                    status.textContent = [v ? `${v.name} — ${v.lang}` : '', exact ? '' : t('set.voice_chile_fallback')].filter(Boolean).join(' · ');
+                  };
+                  repaint();
+                  details.append(status, h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
+                } else if (!A.voice.usesSite(s.voice, s.target)) {
+                  const sel = h('select', { class: 'select', 'aria-label': t('set.voice_system') });
+                  let signature = null;
+                  repaint = () => {
+                    const mine = A.voice.list(A.voice.now(), s.target);
+                    const next = JSON.stringify(mine.map(v => [v.voiceURI, v.name, v.lang]));
+                    if (next === signature) return;
+                    signature = next;
+                    const want = s.voiceURI || '';
+                    sel.replaceChildren(h('option', { value: '' }, t('set.voice_default')));
+                    if (mine.length) {
+                      const group = h('optgroup', { label: t('set.voice_system') });
+                      for (const v of mine) group.append(h('option', { value: v.voiceURI }, `${v.name} — ${v.lang}`));
+                      sel.append(group);
+                    }
+                    sel.value = want;
+                    if (sel.value !== want) sel.value = '';
+                  };
+                  repaint();
+                  sel.addEventListener('change', () => set({ voiceURI: sel.value }));
+                  details.append(sel);
+                } else return;
+                details.append(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('set.voice_system'), onclick: () => { A.voice.refresh(); repaint(); } }, '↻ ', t('set.voice_system')));
+              };
               const seg = A.segmented([
                 { value: 'site', label: t('set.voice_site') },
                 { value: 'system', label: t('set.voice_system') },
                 ...(s.target === 'es' ? [{ value: 'chile', label: t('set.voice_chile') }, { value: 'neural', label: t('set.voice_neural') }] : []),
-              ], s.target === 'es' && ['chile', 'neural'].includes(s.voice) ? s.voice : A.voice.usesSite(s.voice, s.target) ? 'site' : 'system', (v) => set({ voice: v }, true));
-              const wrap = h('div', { class: 'voice-pick' }, seg);
-              if (s.voice === 'neural' && s.target === 'es') {
-                const sel = h('select', { class: 'select' }, [h('option', { value: 'catalina' }, 'Catalina — es-CL'), h('option', { value: 'lorenzo' }, 'Lorenzo — es-CL')]);
-                sel.value = A.voice.neural(s, 'es');
-                sel.addEventListener('change', () => set({ neuralVoice: sel.value }));
-                wrap.append(sel, h('small', { class: 'muted' }, t('set.voice_neural_hint')), h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
-                return wrap;
-              }
-              if (s.voice === 'chile' && s.target === 'es') {
-                const status = h('small', { class: 'muted' });
-                const paint = () => {
-                  const v = A.voice.resolve(A.voice.now(), s, 'es');
-                  status.textContent = v ? `${v.name} — ${v.lang}` : t('set.voice_chile_fallback');
-                };
-                paint();
-                A.voice.ready.then(paint);
-                wrap.append(status);
-                return wrap;
-              }
-              if (A.voice.usesSite(s.voice, s.target)) return wrap;
-              const sel = h('select', { class: 'select' });
-              const fill = () => {
-                const want = s.voiceURI || '';
-                sel.replaceChildren(h('option', { value: '' }, t('set.voice_default')));
-                const mine = A.voice.list(A.voice.now(), s.target);
-                if (mine.length) {
-                  const group = h('optgroup', { label: t('set.voice_system') });
-                  for (const v of mine) group.append(h('option', { value: v.voiceURI }, `${v.name} — ${v.lang}`));
-                  sel.append(group);
-                }
-                sel.value = want;
-                if (sel.value !== want) sel.value = ''; // a voice this device does not have
-              };
-              fill();
-              A.voice.ready.then(() => { if (!sel.querySelector('optgroup')) fill(); });
-              sel.addEventListener('change', () => set({ voiceURI: sel.value }));
-              wrap.append(sel);
+              ], s.target === 'es' && ['chile', 'neural'].includes(s.voice) ? s.voice : A.voice.usesSite(s.voice, s.target) ? 'site' : 'system', (v) => {
+                set({ voice: v });
+                A.voice.refresh();
+                draw();
+              });
+              wrap.append(seg, details);
+              A.voice.refresh();
+              draw();
+              this.voiceUnsubscribe = A.voice.subscribe(() => repaint());
               return wrap;
             })()),
             row(t('set.voice_rate'), t('set.voice_rate_hint'), (() => {

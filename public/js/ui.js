@@ -206,11 +206,27 @@
   // Safari's first getVoices() is empty: the list arrives with voiceschanged, so the picker waits for it
   let markReady;
   const voiceReady = new Promise((resolve) => { markReady = resolve; });
-  if (synth) {
-    const load = () => { voices = synth.getVoices(); if (voices.length) markReady(); };
-    load();
-    synth.addEventListener?.('voiceschanged', load);
+  const voiceListeners = new Set();
+  function loadVoices() {
+    if (!synth) return voices;
+    try {
+      const fresh = Array.from(synth.getVoices() || []);
+      const fingerprint = (xs) => JSON.stringify(xs.map(v => [v.voiceURI, v.name, v.lang, v.default, v.localService]));
+      const changed = fingerprint(fresh) !== fingerprint(voices);
+      voices = fresh;
+      if (voices.length) markReady();
+      if (changed) for (const listener of voiceListeners) listener();
+    } catch { /* platform may temporarily refuse enumeration */ }
+    return voices;
   }
+  if (synth) {
+    loadVoices();
+    synth.addEventListener?.('voiceschanged', loadVoices);
+    window.addEventListener?.('focus', loadVoices);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) loadVoices(); });
+  }
+  A.voice.refresh = loadVoices;
+  A.voice.subscribe = (fn) => { voiceListeners.add(fn); return () => voiceListeners.delete(fn); };
   const voiceFor = (lang) => A.voice.forLang(voices, lang);
   /* A card's own recording when it has one (from an Anki deck), the system's voice otherwise.
      Phones (Safari above all) play sound only when play() is called right inside a tap, not after waiting for the
@@ -285,7 +301,7 @@
     // a word in another alphabet than its deck's (a Russian word in a Norwegian deck) is read in its own language
     if (!A.langs.fits(text, lang)) lang = A.langs.guess(text, [A.store?.settings?.native, A.store?.settings?.target]) || lang;
     // u.voice stays unset for "system default": the only way to the Siri voice on iOS
-    const v = A.voice.resolve(voices, A.store?.settings, lang);
+    const v = A.voice.resolve(loadVoices(), A.store?.settings, lang);
     if (!v && A.voice.usesSite(A.store?.settings?.voice, lang) && !A.voice.neural(A.store?.settings, lang)) { // the site's voice was wanted, the device has none
       state(text, 'idle');
       toast(A.t('tts.none', { lang: A.langs.name(lang) }));
