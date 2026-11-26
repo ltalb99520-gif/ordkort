@@ -803,6 +803,8 @@ globalThis.App.i18nData.uk = {
   'set.voice_default': "Системний за замовчуванням",
   'set.voice_system': "Голос пристрою",
   'set.voice_refresh': "Оновити список голосів",
+  'set.voice_all': "Показати всі голоси пристрою",
+  'set.voice_counts': "Поточна мова: {target} · Усього: {total}",
   'set.voice_chile': "Пріоритет чилійської іспанської",
   'set.voice_chile_fallback': "Запитано es-CL; пристрій може використати запасний голос.",
   'set.voice_rate': "Швидкість мовлення пристрою",
