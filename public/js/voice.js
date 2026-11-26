@@ -23,6 +23,10 @@
     return out;
   }
 
+  function choices(voices, lang) {
+    return [...new Map(list(voices, lang).filter(v => v.voiceURI).map(v => [v.voiceURI, v])).values()];
+  }
+
   function forLang(voices, lang) {
     const fits = list(voices, lang);
     const preferred = (xs) => xs.find((x) => /natural|neural|online|google|enhanced|premium|siri/i.test(x.name)) || xs[0] || null;
@@ -73,5 +77,5 @@
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, forLang, resolve, speechPlan, langTag, rate };
+  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, choices, forLang, resolve, speechPlan, langTag, rate };
 })();
