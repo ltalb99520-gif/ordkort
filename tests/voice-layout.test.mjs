@@ -8,5 +8,5 @@ test('voice settings use shrinkable tracks and wrap translated labels', () => {
   assert.match(css, /\.voice-pick \.seg button \{[^}]*white-space: normal[^}]*overflow-wrap: anywhere/);
   assert.match(css, /\.set-grid \{ grid-template-columns: minmax\(0, 1fr\); \}/);
   assert.match(css, /\.set-ctl \{ min-width: 0; max-width: 100%;/);
-  assert.match(css, /\.voice-pick \.seg \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); width: 100%; \}/);
+  assert.match(css, /\.voice-pick \.seg \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);[^}]*width: 100%;[^}]*\}/);
 });
