@@ -797,6 +797,7 @@ globalThis.App.i18nData.en = {
   'set.voice_default': "System default",
   'set.voice_system': "Device voice",
   'set.voice_refresh': "Refresh device voices",
+  'set.voice_reload': "Reload app",
   'set.voice_all': "Show all device voices",
   'set.voice_counts': "Target language: {target} · All: {total}",
   'set.voice_search': "Search voices by name or language",
