@@ -811,6 +811,8 @@ globalThis.App.i18nData.ar = {
   'set.voice_default': "الافتراضي للنظام",
   'set.voice_system': "صوت الجهاز",
   'set.voice_refresh': "تحديث قائمة أصوات الجهاز",
+  'set.voice_all': "عرض جميع أصوات الجهاز",
+  'set.voice_counts': "اللغة الحالية: {target} · الكل: {total}",
   'set.voice_chile': "تفضيل الإسبانية التشيلية",
   'set.voice_chile_fallback': "تم طلب es-CL؛ قد يستخدم الجهاز صوتًا بديلًا.",
   'set.voice_rate': "سرعة نطق الجهاز",
