@@ -271,11 +271,13 @@
     // no recording of its own: the site's voice (a native speaker from Wiktionary, or a synthetic one), unless the
     // person chose the device's voice in Settings; the device's voice also when the site has none for this text
     if (!A.voice.usesSite(A.store?.settings?.voice, lang) || !A.media?.voice || !text) return say(text, lang);
-    const ready = A.media.voiceNow(text, lang);
+    const neural = A.voice.neural(A.store?.settings, lang);
+    const fallback = () => { if (neural) toast(A.t('set.voice_neural_fallback')); return say(text, lang); };
+    const ready = A.media.voiceNow(text, lang, neural);
     if (ready) { play(ready, text, lang); return true; }
-    if (ready === '') return say(text, lang);
+    if (ready === '') return fallback();
     play('', text, lang);
-    A.media.voice(text, lang).then((u) => (u ? play(u, text, lang) : say(text, lang)));
+    A.media.voice(text, lang, neural).then((u) => (u ? play(u, text, lang) : fallback()));
     return true;
   }
   function say(text, lang) {
@@ -284,14 +286,14 @@
     if (!A.langs.fits(text, lang)) lang = A.langs.guess(text, [A.store?.settings?.native, A.store?.settings?.target]) || lang;
     // u.voice stays unset for "system default": the only way to the Siri voice on iOS
     const v = A.voice.resolve(voices, A.store?.settings, lang);
-    if (!v && A.voice.usesSite(A.store?.settings?.voice, lang)) { // the site's voice was wanted, the device has none
+    if (!v && A.voice.usesSite(A.store?.settings?.voice, lang) && !A.voice.neural(A.store?.settings, lang)) { // the site's voice was wanted, the device has none
       state(text, 'idle');
       toast(A.t('tts.none', { lang: A.langs.name(lang) }));
       return false;
     }
     const u = new SpeechSynthesisUtterance(String(text).replace(/[*_]/g, ''));
     if (v) u.voice = v;
-    u.lang = v ? v.lang : (A.store?.settings?.voice === 'chile' && lang === 'es' ? 'es-CL' : A.voice.langTag(voices, lang));
+    u.lang = v ? v.lang : ((A.store?.settings?.voice === 'chile' || A.voice.neural(A.store?.settings, lang)) && lang === 'es' ? 'es-CL' : A.voice.langTag(voices, lang));
     u.rate = A.voice.rate(A.store?.settings);
     sounding = null;
     u.onstart = () => state(text, 'playing');
