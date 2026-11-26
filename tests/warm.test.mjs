@@ -16,7 +16,7 @@ test('the plan: real languages and topics, no group twice, the first decks of th
   for (const g of list) {
     assert.ok(codes.has(g.target) && codes.has(g.native) && g.target !== g.native, g.grp);
     assert.ok(topics.has(g.topic), g.grp);
-    assert.equal(g.grp, `${g.target}:${g.native}:${g.topic}:${g.level}`);
+    assert.equal(g.grp, `${g.target === 'es' ? 'es-cl-v1' : g.target}:${g.native}:${g.topic}:${g.level}`);
   }
   // what every newcomer gets, for the pairs the site is built around
   assert.deepEqual(list.slice(0, 3).map((g) => g.grp), ['nb:en:greetings:A1', 'nb:en:core:A1', 'nb:en:numbers:A1']);
