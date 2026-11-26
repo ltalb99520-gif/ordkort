@@ -813,6 +813,7 @@ globalThis.App.i18nData.ar = {
   'set.voice_default': "الافتراضي للنظام",
   'set.voice_system': "صوت الجهاز",
   'set.voice_refresh': "تحديث قائمة أصوات الجهاز",
+  'set.voice_reload': "إعادة تحميل التطبيق",
   'set.voice_all': "عرض جميع أصوات الجهاز",
   'set.voice_counts': "اللغة الحالية: {target} · الكل: {total}",
   'set.voice_search': "البحث بالاسم أو اللغة",
