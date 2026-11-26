@@ -810,6 +810,7 @@ globalThis.App.i18nData.ar = {
   'set.voice_site': "التسجيلات وصوت الموقع",
   'set.voice_default': "الافتراضي للنظام",
   'set.voice_system': "صوت الجهاز",
+  'set.voice_refresh': "تحديث قائمة أصوات الجهاز",
   'set.voice_chile': "تفضيل الإسبانية التشيلية",
   'set.voice_chile_fallback': "تم طلب es-CL؛ قد يستخدم الجهاز صوتًا بديلًا.",
   'set.voice_rate': "سرعة نطق الجهاز",
