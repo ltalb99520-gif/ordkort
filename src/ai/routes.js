@@ -18,7 +18,7 @@ const WEEK = 7 * 864e5;
 const h32 = async (s) => (await sha256(s)).slice(0, 32);
 
 /* Cache keys — one place, so that reports can find exactly the entry that was served */
-const dialectTarget = (target) => target === 'es' ? 'es-cl-v1' : target;
+export const dialectTarget = (target) => target === 'es' ? 'es-cl-v1' : target;
 const KEYS = {
   lookup: async (t, n, b) => `d1:${dialectTarget(t)}:${n}:${await h32(str(b.q, 60).toLowerCase())}`,
   chapter: async (t, n, b) => `g1:${dialectTarget(t)}:${n}:${b.id}`,
