@@ -10,6 +10,8 @@ globalThis.App.i18nData.en = {
   'pair.title': 'Languages I learn',
   'pair.hint': 'Each language has its own decks and progress. Explanations are in {lang}.',
   'pair.add': 'Learn another language',
+  'pair.remove': "Remove",
+  'pair.remove_confirm': "Remove {lang} from your learning list? Your cards and progress will be kept. Add the language again to restore it.",
   'pair.due': '{n} to review',
   'pair.due_elsewhere': 'Words are waiting for review in another language',
   'theme.toggle': 'Switch light / dark theme',
