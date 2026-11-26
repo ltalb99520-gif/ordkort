@@ -63,8 +63,8 @@
     // Room in the database a day (src/core/limits.js takeStore): sync copies and their files, links, library decks,
     // voices. Per person, and for the whole site. D1 holds 500 MB on the free plan, 10 GB on the paid one:
     // on the free plan lower STORE_SITE_DAY_MB, or the database can still fill in a few days of an attack
-    "STORE_PER_DAY_MB": "10",
-    "STORE_SITE_DAY_MB": "20",
+    "STORE_PER_DAY_MB": "25",
+    "STORE_SITE_DAY_MB": "100",
     // Requests to the moderating models when decks are published to the library (src/decks/library.js)
     "GUARD_PER_DAY": "60",
     "GUARD_SITE_DAY": "400",
