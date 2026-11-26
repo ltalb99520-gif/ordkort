@@ -799,7 +799,7 @@ globalThis.App.i18nData.nb = {
   'set.voice_chile_fallback': "Ber om es-CL; enheten kan bruke en reservestemme.",
   'set.voice_rate': "Talehastighet på enheten",
   'set.voice_rate_hint': "Gjelder enhetens syntetiske tale, ikke lydopptak.",
-  'set.voice_neural': "Chilensk skystemme",
+  'set.voice_neural': "Skystemme",
   'set.voice_neural_hint': "Når Azure er konfigurert, sendes spansk tekst dit. Ellers brukes enhetens stemme.",
   'set.voice_neural_fallback': "Skystemmen er utilgjengelig; bruker enhetens stemme.",
   'about.voice_h': "Stemmen på kortene",
