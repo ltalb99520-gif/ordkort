@@ -815,7 +815,7 @@ globalThis.App.i18nData.ar = {
   'set.voice_chile_fallback': "تم طلب es-CL؛ قد يستخدم الجهاز صوتًا بديلًا.",
   'set.voice_rate': "سرعة نطق الجهاز",
   'set.voice_rate_hint': "تؤثر فقط في النطق الاصطناعي للجهاز، وليس التسجيلات.",
-  'set.voice_neural': "صوت تشيلي سحابي",
+  'set.voice_neural': "صوت سحابي",
   'set.voice_neural_hint': "عند إعداد Azure يُرسل النص الإسباني إليه؛ وعند عدم توفره يُستخدم صوت الجهاز.",
   'set.voice_neural_fallback': "الصوت السحابي غير متاح؛ سيتم استخدام صوت الجهاز.",
   'about.voice_h': "صوت البطاقات",
