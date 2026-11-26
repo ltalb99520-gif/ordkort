@@ -274,15 +274,21 @@
                 const showAll = h('input', { type: 'checkbox' });
                 showAll.checked = all;
                 const scope = h('label', { class: 'row gap small' }, showAll, t('set.voice_all'));
+                const search = h('input', { type: 'search', class: 'input', placeholder: t('set.voice_search'), 'aria-label': t('set.voice_search') });
+                const info = h('div', { class: 'small muted', style: 'overflow-wrap:anywhere' });
+                const report = h('small', { class: 'muted', role: 'status' });
                 repaint = () => {
                   const detected = A.voice.now();
                   const target = A.voice.choices(detected, s.target);
                   const total = A.voice.choices(detected);
-                  const unique = A.voice.displayChoices(detected, all ? null : s.target);
-                  const next = JSON.stringify(unique.map(({voice:v,label}) => [v.voiceURI, label]));
+                  const unique = A.voice.searchChoices(A.voice.displayChoices(detected, all ? null : s.target), search.value);
                   const want = s.voiceURI || '';
-                  if (next !== signature) {
-                    signature = next;
+                  // Keep the actual saved selection visible while filtering.
+                  const saved = A.voice.displayChoices(detected).find(x => x.voice.voiceURI === want);
+                  if (saved && !unique.some(x => x.voice.voiceURI === want)) unique.unshift(saved);
+                  const key = JSON.stringify(unique.map(({voice:v,label}) => [v.voiceURI, label]));
+                  if (key !== signature) {
+                    signature = key;
                     sel.replaceChildren(h('option', { value: '' }, t('set.voice_default')));
                     if (unique.length) {
                       const group = h('optgroup', { label: t('set.voice_system') });
@@ -295,13 +301,44 @@
                   const plan = A.voice.speechPlan(A.voice.now(), s, s.target);
                   const label = plan.voice ? `${plan.voice.name} — ${plan.voice.lang}` : t('set.voice_default');
                   status.textContent = `${label} · ${t('set.voice_counts', { target: target.length, total: total.length })}`;
+                  const v = plan.voice;
+                  info.replaceChildren();
+                  if (v) {
+                    const d = h('details', null, h('summary', null, t('set.voice_details')),
+                      h('div', null, `ID: ${v.voiceURI}`),
+                      h('div', null, `BCP-47: ${v.lang}`),
+                      h('div', null, t(v.localService === true ? 'set.voice_local' : v.localService === false ? 'set.voice_online' : 'set.voice_unknown')),
+                      h('div', null, t('set.voice_os_default') + ': ' + String(v.default)));
+                    info.append(d);
+                  }
                 };
                 repaint();
                 sel.addEventListener('change', () => { set({ voiceURI: sel.value }); repaint(); });
                 showAll.addEventListener('change', () => { all = showAll.checked; signature = null; repaint(); });
-                details.append(status, scope, sel);
+                search.addEventListener('input', () => { signature = null; repaint(); });
+                details.append(status, scope, search, sel, info);
                 if (s.target === 'es') details.append(h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
-                details.append(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('set.voice_refresh'), onclick: () => { A.voice.refresh(); signature = null; repaint(); } }, '↻ ', t('set.voice_refresh')));
+                const refresh = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('set.voice_refresh') }, '↻ ', t('set.voice_refresh'));
+                refresh.addEventListener('click', async () => {
+                  const before = [...A.voice.now()];
+                  refresh.disabled = true;
+                  report.textContent = t('set.voice_scanning');
+                  try {
+                    // Re-query immediately, then allow asynchronous OS/browser enumeration to settle.
+                    for (const delay of [0, 350, 900, 1500]) {
+                      if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+                      if (!refresh.isConnected) return;
+                      A.voice.refresh();
+                      signature = null;
+                      repaint();
+                    }
+                    const diff = A.voice.voiceChanges(before, A.voice.now());
+                    report.textContent = t('set.voice_refresh_result', { before: diff.before, after: diff.after, added: diff.added.length, removed: diff.removed });
+                    if (diff.added.length) report.textContent += ' · ' + diff.added.map(v => v.name + ' — ' + v.lang).join(', ');
+                    if (!diff.added.length && !diff.removed) report.textContent += ' · ' + t('set.voice_unchanged');
+                  } finally { refresh.disabled = false; }
+                });
+                details.append(refresh, report);
               };
               // Migrate the retired automatic Chilean mode to manual device selection.
               if (s.voice === 'chile') A.store.set({ voice: 'system', voiceURI: '' });
