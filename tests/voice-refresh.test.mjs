@@ -37,3 +37,16 @@ test('voice mode selection saves and redraws only its own details', () => {
   assert.match(block,/details\.replaceChildren\(\)/);
   assert.match(block,/A\.voice\.subscribe\(/);
 });
+
+test('both device modes expose refreshed detected choices, and manual choice switches mode without routing', () => {
+  const src=read('public/js/views/settings.js');
+  const block=src.slice(src.indexOf("row(t('set.voice')"),src.indexOf("row(t('set.voice_rate')"));
+  assert.match(block,/const chile = s\.voice === 'chile'/);
+  assert.match(block,/A\.voice\.list\(A\.voice\.now\(\), s\.target\)/);
+  assert.match(block,/new Map\(mine\.map\(v => \[v\.voiceURI, v\]\)\)/);
+  assert.match(block,/set\(\{ voice: 'system', voiceURI: sel\.value \}\)/);
+  assert.match(block,/details\.append\(status, sel\)/);
+  assert.match(block,/A\.voice\.refresh\(\); signature = null; repaint\(\);/);
+  assert.match(block,/t\('set\.voice_refresh'\)/);
+  assert.doesNotMatch(block,/A\.route\(/);
+});
