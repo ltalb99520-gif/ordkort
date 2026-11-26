@@ -797,6 +797,7 @@ globalThis.App.i18nData.nb = {
   'set.voice_default': "Systemets standard",
   'set.voice_system': "Enhetens stemme",
   'set.voice_refresh': "Oppdater stemmelisten",
+  'set.voice_reload': "Last appen på nytt",
   'set.voice_all': "Vis alle enhetsstemmer",
   'set.voice_counts': "Valgt språk: {target} · Alle: {total}",
   'set.voice_search': "Søk etter navn eller språk",
