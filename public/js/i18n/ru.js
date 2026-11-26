@@ -802,6 +802,7 @@ globalThis.App.i18nData.ru = {
   'set.voice_site': "Записи и голос сайта",
   'set.voice_default': "Системный по умолчанию",
   'set.voice_system': "Голос устройства",
+  'set.voice_refresh': "Обновить список голосов",
   'set.voice_chile': "Приоритет чилийского испанского",
   'set.voice_chile_fallback': "Запрошен es-CL; устройство может использовать запасной голос.",
   'set.voice_rate': "Скорость речи устройства",
