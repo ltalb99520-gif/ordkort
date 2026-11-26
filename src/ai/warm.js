@@ -7,7 +7,8 @@
    That cap matters most: Groq's free plan allows each model 200,000 tokens in any 24 hours, about 100–150 AI
    answers a day for the whole site, and one list of words takes 5,000–7,000. It goes through the same code and
    the same limits as a visitor's request (api.words), under its own key. */
-import { words } from './routes.js';
+import { words, dialectTarget } from './routes.js';
+import { App } from '../core/shared.js';
 import { limitsOf } from '../core/limits.js';
 import { peek, bump } from '../core/db.js';
 import { today } from '../core/util.js';
@@ -30,7 +31,7 @@ export function plan(topics) {
   const out = [], seen = new Set();
   const add = (pair, topic, level) => {
     const [target, native] = pair.split(':');
-    const grp = `${target}:${native}:${topic}:${level}`; // as api.js names a group of the bank
+    const grp = `${dialectTarget(target)}:${native}:${topic}:${level}`; // as api.js names a group of the bank
     if (target === native || seen.has(grp)) return;
     seen.add(grp);
     out.push({ target, native, topic, level, grp });
@@ -66,7 +67,7 @@ export function quiet(state, used, budget) {
   return !state || state.day !== today() || used <= state.used;
 }
 
-const STATE = 'warm:state';
+const STATE = 'warm:state:cl-v1';
 async function getState(db) {
   const row = await db.prepare('SELECT v FROM cache WHERE k = ?').bind(STATE).first();
   try { return row ? JSON.parse(row.v) : null; } catch { return null; }
