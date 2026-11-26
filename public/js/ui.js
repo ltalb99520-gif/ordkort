@@ -286,6 +286,7 @@
     }
     // no recording of its own: the site's voice (a native speaker from Wiktionary, or a synthetic one), unless the
     // person chose the device's voice in Settings; the device's voice also when the site has none for this text
+    if (A.store?.settings?.voice === 'neural' && !A.voice.neural(A.store.settings, lang)) return say(text, lang);
     if (!A.voice.usesSite(A.store?.settings?.voice, lang) || !A.media?.voice || !text) return say(text, lang);
     const neural = A.voice.neural(A.store?.settings, lang);
     const fallback = () => { if (neural) toast(A.t('set.voice_neural_fallback')); return say(text, lang); };
@@ -303,7 +304,7 @@
     // u.voice stays unset for "system default": the only way to the Siri voice on iOS
     const plan = A.voice.speechPlan(loadVoices(), A.store?.settings, lang);
     const v = plan.voice;
-    if (!v && A.voice.usesSite(A.store?.settings?.voice, lang) && !A.voice.neural(A.store?.settings, lang)) { // the site's voice was wanted, the device has none
+    if (!v && A.voice.usesSite(A.store?.settings?.voice, lang) && A.store?.settings?.voice !== 'neural') { // the site's voice was wanted, the device has none
       state(text, 'idle');
       toast(A.t('tts.none', { lang: A.langs.name(lang) }));
       return false;
