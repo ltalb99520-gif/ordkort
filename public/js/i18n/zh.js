@@ -790,6 +790,7 @@ globalThis.App.i18nData.zh = {
   'set.voice_site': "录音和网站语音",
   'set.voice_default': "系统默认",
   'set.voice_system': "设备语音",
+  'set.voice_refresh': "刷新设备语音列表",
   'set.voice_chile': "智利西语优先",
   'set.voice_chile_fallback': "请求智利西语 es-CL；设备可能使用备用语音。",
   'set.voice_rate': "设备语音语速",
