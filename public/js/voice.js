@@ -50,7 +50,7 @@
     }
     if (usesSite(settings?.voice, lang)) return forLang(voices, lang);
     const pick = settings?.voiceURI;
-    return pick ? list(voices, lang).find((v) => v.voiceURI === pick) || null : null;
+    return pick ? (voices || []).find((v) => v.voiceURI === pick) || null : null;
   }
 
   function langTag(voices, lang) {
