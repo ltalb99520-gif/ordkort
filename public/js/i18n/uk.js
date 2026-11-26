@@ -805,6 +805,7 @@ globalThis.App.i18nData.uk = {
   'set.voice_default': "Системний за замовчуванням",
   'set.voice_system': "Голос пристрою",
   'set.voice_refresh': "Оновити список голосів",
+  'set.voice_reload': "Перезавантажити застосунок",
   'set.voice_all': "Показати всі голоси пристрою",
   'set.voice_counts': "Поточна мова: {target} · Усього: {total}",
   'set.voice_search': "Пошук за назвою або мовою",
