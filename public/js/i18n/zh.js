@@ -793,6 +793,7 @@ globalThis.App.i18nData.zh = {
   'set.voice_default': "系统默认",
   'set.voice_system': "设备语音",
   'set.voice_refresh': "刷新设备语音列表",
+  'set.voice_reload': "重新加载应用",
   'set.voice_all': "显示全部设备语音",
   'set.voice_counts': "当前语言：{target} · 全部：{total}",
   'set.voice_search': "搜索语音名称或语言代码",
