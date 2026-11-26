@@ -4,6 +4,7 @@
 
   const SITE = 'site';
   const DEVICE = 'system';
+  const CHILE = 'chile';
 
   const ALIAS = { nb: ['nb', 'no', 'nn'], nn: ['nn', 'nb', 'no'], zh: ['zh-cn', 'cmn', 'zh'], prs: ['fa-af', 'prs', 'fa'], kmr: ['ku', 'kmr'], tl: ['fil', 'tl'], he: ['he', 'iw'], arz: ['ar-eg', 'ar'], apc: ['ar-lb', 'ar-sy', 'ar'], ary: ['ar-ma', 'ar'], yue: ['zh-hk', 'yue'], gsw: ['gsw', 'de-ch'], bs: ['bs', 'hr'] };
 
@@ -28,16 +29,28 @@
     return preferred(fits);
   }
 
-  function usesSite(voice) {
-    return voice !== DEVICE;
+  function usesSite(voice, lang) {
+    return voice !== DEVICE && !(voice === CHILE && (!lang || lang === 'es'));
+  }
+
+  function rate(settings) {
+    const n = Number(settings?.voiceRate ?? 0.9);
+    return Number.isFinite(n) && n >= 0.5 && n <= 1.5 ? n : 0.9;
   }
 
   /* The voice to speak `lang` with, or null for "leave u.voice unset": that is the only way to the system default,
      which on iOS is the Siri voice — a voice getVoices() never lists. */
   function resolve(voices, settings, lang) {
-    if (usesSite(settings?.voice)) return forLang(voices, lang);
+    if (settings?.voice === CHILE && lang === 'es') {
+      const fits = list(voices, lang);
+      const exact = fits.filter((v) => tag(v) === 'es-cl');
+      if (exact.length) return forLang(exact, lang);
+      const latam = fits.filter((v) => /^es-(?!es$)[a-z]{2}$/.test(tag(v)));
+      return forLang(latam, lang) || forLang(fits, lang);
+    }
+    if (usesSite(settings?.voice, lang)) return forLang(voices, lang);
     const pick = settings?.voiceURI;
-    return pick ? (voices || []).find((v) => v.voiceURI === pick) || null : null;
+    return pick ? list(voices, lang).find((v) => v.voiceURI === pick) || null : null;
   }
 
   function langTag(voices, lang) {
@@ -45,5 +58,5 @@
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, usesSite, list, forLang, resolve, langTag };
+  A.voice = { SITE, DEVICE, CHILE, usesSite, list, forLang, resolve, langTag, rate };
 })();
