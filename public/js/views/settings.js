@@ -340,10 +340,15 @@
                     const diff = A.voice.voiceChanges(before, A.voice.now());
                     report.textContent = t('set.voice_refresh_result', { before: diff.before, after: diff.after, added: diff.added.length, removed: diff.removed });
                     if (diff.added.length) report.textContent += ' · ' + diff.added.map(v => v.name + ' — ' + v.lang).join(', ');
+                    reload.hidden = !!(diff.added.length || diff.removed);
                     if (!diff.added.length && !diff.removed) report.textContent += ' · ' + t('set.voice_unchanged');
                   } finally { refresh.disabled = false; }
                 });
-                details.append(refresh, report);
+                const reload = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', hidden: true, onclick: async () => {
+                  await A.store.flushed();
+                  location.reload();
+                } }, t('set.voice_reload'));
+                details.append(refresh, report, reload);
               };
               // Migrate the retired automatic Chilean mode to manual device selection.
               if (s.voice === 'chile') A.store.set({ voice: 'system', voiceURI: '' });
