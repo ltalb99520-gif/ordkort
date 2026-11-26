@@ -255,9 +255,21 @@
               const seg = A.segmented([
                 { value: 'site', label: t('set.voice_site') },
                 { value: 'system', label: t('set.voice_system') },
-              ], A.voice.usesSite(s.voice) ? 'site' : 'system', (v) => set({ voice: v }, true));
+                ...(s.target === 'es' ? [{ value: 'chile', label: t('set.voice_chile') }] : []),
+              ], s.voice === 'chile' && s.target === 'es' ? 'chile' : A.voice.usesSite(s.voice, s.target) ? 'site' : 'system', (v) => set({ voice: v }, true));
               const wrap = h('div', { class: 'voice-pick' }, seg);
-              if (A.voice.usesSite(s.voice)) return wrap;
+              if (s.voice === 'chile' && s.target === 'es') {
+                const status = h('small', { class: 'muted' });
+                const paint = () => {
+                  const v = A.voice.resolve(A.voice.now(), s, 'es');
+                  status.textContent = v ? `${v.name} — ${v.lang}` : t('set.voice_chile_fallback');
+                };
+                paint();
+                A.voice.ready.then(paint);
+                wrap.append(status);
+                return wrap;
+              }
+              if (A.voice.usesSite(s.voice, s.target)) return wrap;
               const sel = h('select', { class: 'select' });
               const fill = () => {
                 const want = s.voiceURI || '';
@@ -276,6 +288,12 @@
               sel.addEventListener('change', () => set({ voiceURI: sel.value }));
               wrap.append(sel);
               return wrap;
+            })()),
+            row(t('set.voice_rate'), t('set.voice_rate_hint'), (() => {
+              const sel = h('select', { class: 'select narrow' }, [0.5, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.5].map((v) => h('option', { value: v }, `${v.toFixed(1)}×`)));
+              sel.value = String(A.voice.rate(s));
+              sel.addEventListener('change', () => set({ voiceRate: Number(sel.value) }));
+              return sel;
             })()),
             row(t('set.auto_cover'), t('set.auto_cover_hint'), toggle(s.autoCover !== false, (v) => set({ autoCover: v }))),
             remindRow())),
