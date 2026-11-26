@@ -805,6 +805,7 @@ globalThis.App.i18nData.ru = {
   'set.voice_default': "Системный по умолчанию",
   'set.voice_system': "Голос устройства",
   'set.voice_refresh': "Обновить список голосов",
+  'set.voice_reload': "Перезагрузить приложение",
   'set.voice_all': "Показать все голоса устройства",
   'set.voice_counts': "Текущий язык: {target} · Всего: {total}",
   'set.voice_search': "Поиск по имени или языку",
