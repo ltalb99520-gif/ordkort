@@ -8,6 +8,7 @@ import { str, arr } from '../core/util.js';
 const nameOf = (c) => App.langs.en(c);
 
 const NORMS = {
+  es: ' Prefer natural, widely used Chilean Spanish for newly generated vocabulary, phrases and examples (e.g. palta, frutilla, micro, bencina, polera, celular, choclo). Use standard spelling and grammar, distinguish informal Chilean usage from neutral or formal language when relevant, and respect the requested CEFR level. Do not replace existing learner terms or quoted source text merely because of regional variation. Never contradict supplied dictionary facts, verified grammar references or explicit allowed word lists.',
   nb: ' Follow the official Bokmål norm exactly as in Bokmålsordboka (ordbokene.no); prefer the most common standard forms.',
   nn: ' Follow the official Nynorsk norm exactly as in Nynorskordboka (ordbokene.no); prefer the most common standard forms.',
   zh: ' Use Simplified Chinese characters.',
