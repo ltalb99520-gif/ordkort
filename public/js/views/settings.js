@@ -268,18 +268,16 @@
                   return;
                 }
                 if (A.voice.usesSite(s.voice, s.target)) return;
-                const chile = s.voice === 'chile' && s.target === 'es';
                 const status = h('small', { class: 'muted', role: 'status' });
                 const sel = h('select', { class: 'select', 'aria-label': t('set.voice_system') });
                 let signature = null;
                 repaint = () => {
-                  const mine = A.voice.list(A.voice.now(), s.target);
-                  const unique = [...new Map(mine.map(v => [v.voiceURI, v])).values()];
+                  const unique = A.voice.choices(A.voice.now(), s.target);
                   const next = JSON.stringify(unique.map(v => [v.voiceURI, v.name, v.lang]));
-                  const want = chile ? '' : s.voiceURI || '';
+                  const want = s.voiceURI || '';
                   if (next !== signature) {
                     signature = next;
-                    sel.replaceChildren(h('option', { value: '' }, t(chile ? 'set.voice_chile' : 'set.voice_default')));
+                    sel.replaceChildren(h('option', { value: '' }, t('set.voice_default')));
                     if (unique.length) {
                       const group = h('optgroup', { label: t('set.voice_system') });
                       for (const v of unique) group.append(h('option', { value: v.voiceURI }, `${v.name} — ${v.lang}`));
@@ -289,34 +287,22 @@
                   sel.value = want;
                   if (sel.value !== want) sel.value = '';
                   const plan = A.voice.speechPlan(A.voice.now(), s, s.target);
-                  const label = plan.voice ? `${plan.voice.name} — ${plan.voice.lang}` : chile ? [t('set.voice_chile_fallback'), plan.fallback ? `${plan.fallback.name} — ${plan.fallback.lang}` : ''].filter(Boolean).join(' · ') : t('set.voice_default');
+                  const label = plan.voice ? `${plan.voice.name} — ${plan.voice.lang}` : t('set.voice_default');
                   status.textContent = `${label} · ${t('set.voice_system')}: ${unique.length}`;
                 };
                 repaint();
-                sel.addEventListener('change', () => {
-                  if (chile && sel.value) {
-                    set({ voice: 'system', voiceURI: sel.value });
-                    // Synchronize the segmented buttons without navigating or scrolling.
-                    const buttons = seg.querySelectorAll('button');
-                    buttons.forEach((button, i) => {
-                      button.classList.toggle('on', i === 1);
-                      button.setAttribute('aria-checked', String(i === 1));
-                    });
-                    draw();
-                  } else {
-                    set({ voiceURI: sel.value });
-                    repaint();
-                  }
-                });
+                sel.addEventListener('change', () => { set({ voiceURI: sel.value }); repaint(); });
                 details.append(status, sel);
                 if (s.target === 'es') details.append(h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
                 details.append(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('set.voice_refresh'), onclick: () => { A.voice.refresh(); signature = null; repaint(); } }, '↻ ', t('set.voice_refresh')));
               };
+              // Migrate the retired automatic Chilean mode to manual device selection.
+              if (s.voice === 'chile') A.store.set({ voice: 'system', voiceURI: '' });
               const seg = A.segmented([
                 { value: 'site', label: t('set.voice_site') },
                 { value: 'system', label: t('set.voice_system') },
-                ...(s.target === 'es' ? [{ value: 'chile', label: t('set.voice_chile') }, { value: 'neural', label: t('set.voice_neural') }] : []),
-              ], s.target === 'es' && ['chile', 'neural'].includes(s.voice) ? s.voice : A.voice.usesSite(s.voice, s.target) ? 'site' : 'system', (v) => {
+                ...(s.target === 'es' ? [{ value: 'neural', label: t('set.voice_neural') }] : []),
+              ], s.target === 'es' && s.voice === 'neural' ? s.voice : A.voice.usesSite(s.voice, s.target) ? 'site' : 'system', (v) => {
                 set({ voice: v });
                 A.voice.refresh();
                 draw();
