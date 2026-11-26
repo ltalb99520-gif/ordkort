@@ -101,3 +101,10 @@ test('refresh polls several times and reports differences without rerouting', ()
   assert.match(block,/v\.localService/);
   assert.doesNotMatch(block,/A\.route\(/);
 });
+
+test('voice source buttons occupy three equal shrinkable columns', () => {
+  const css=read('public/css/style.css');
+  assert.match(css,/\.voice-pick \.seg\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(css,/\.voice-pick \.seg\s*\{[^}]*grid-template-columns:\s*repeat\(2,/);
+  assert.match(css,/\.voice-pick \.seg button\s*\{[^}]*min-height:\s*44px/);
+});

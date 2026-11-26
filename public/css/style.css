@@ -1373,8 +1373,8 @@ dialog.modal::backdrop { background: rgba(20, 16, 10, 0.45); backdrop-filter: bl
 .about-links li { margin-bottom: 6px; }
 .fsrs-ctl { display: grid; gap: 6px; justify-items: end; text-align: end; max-width: 260px; }
 .voice-pick { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; justify-items: stretch; width: max-content; max-width: 100%; min-width: 0; }
-.voice-pick .seg { min-width: 0; max-width: 100%; }
-.voice-pick .seg button { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.voice-pick .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-width: 0; max-width: 100%; width: 100%; }
+.voice-pick .seg button { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: center; padding-inline: 8px; }
 .voice-pick small { min-width: 0; overflow-wrap: anywhere; }
 .voice-pick .select { width: 100%; min-width: 0; }
 .lib-tools { margin: 6px 0 18px; align-items: center; }
@@ -1614,8 +1614,7 @@ dialog.modal::backdrop { background: rgba(20, 16, 10, 0.45); backdrop-filter: bl
   .set-card, .set-row, .set-label { min-width: 0; }
   .set-ctl { min-width: 0; max-width: 100%; justify-content: flex-start; }
   .voice-pick { width: 100%; }
-  .voice-pick .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
-  .voice-pick .seg button { padding-inline: 8px; min-height: 44px; text-align: center; }
+  .voice-pick .seg button { padding-inline: 4px; min-height: 44px; }
   .set-ctl .select, .set-ctl .input { width: 100%; min-width: 0; }
   .form-grid { grid-template-columns: 1fr; }
   .field, .field.half, .fill-row { grid-column: span 1; }
