@@ -301,7 +301,8 @@
     // a word in another alphabet than its deck's (a Russian word in a Norwegian deck) is read in its own language
     if (!A.langs.fits(text, lang)) lang = A.langs.guess(text, [A.store?.settings?.native, A.store?.settings?.target]) || lang;
     // u.voice stays unset for "system default": the only way to the Siri voice on iOS
-    const v = A.voice.resolve(loadVoices(), A.store?.settings, lang);
+    const plan = A.voice.speechPlan(loadVoices(), A.store?.settings, lang);
+    const v = plan.voice;
     if (!v && A.voice.usesSite(A.store?.settings?.voice, lang) && !A.voice.neural(A.store?.settings, lang)) { // the site's voice was wanted, the device has none
       state(text, 'idle');
       toast(A.t('tts.none', { lang: A.langs.name(lang) }));
@@ -309,11 +310,24 @@
     }
     const u = new SpeechSynthesisUtterance(String(text).replace(/[*_]/g, ''));
     if (v) u.voice = v;
-    u.lang = v ? v.lang : ((A.store?.settings?.voice === 'chile' || A.voice.neural(A.store?.settings, lang)) && lang === 'es' ? 'es-CL' : A.voice.langTag(voices, lang));
+    u.lang = plan.lang;
     u.rate = A.voice.rate(A.store?.settings);
     sounding = null;
     u.onstart = () => state(text, 'playing');
-    u.onend = u.onerror = () => state(text, 'idle');
+    u.onend = () => state(text, 'idle');
+    u.onerror = (event) => {
+      // Retry with an enumerated voice only if the locale request is explicitly unsupported.
+      // Do not retry cancellation, interruption or other playback errors.
+      if (plan.fallback && ['language-unavailable', 'voice-unavailable'].includes(event.error) && saying === text) {
+        const retry = new SpeechSynthesisUtterance(u.text);
+        retry.voice = plan.fallback;
+        retry.lang = plan.fallback.lang;
+        retry.rate = u.rate;
+        retry.onstart = () => state(text, 'playing');
+        retry.onend = retry.onerror = () => state(text, 'idle');
+        synth.speak(retry);
+      } else state(text, 'idle');
+    };
     synth.cancel();
     synth.speak(u);
     return true;
