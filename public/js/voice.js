@@ -92,10 +92,6 @@
   function forLang(voices, lang) {
     const fits = list(voices, lang);
     const preferred = (xs) => xs.find((x) => /natural|neural|online|google|enhanced|premium|siri/i.test(x.name)) || xs[0] || null;
-    if (lang === 'es') {
-      const chilean = fits.filter((v) => tag(v) === 'es-cl');
-      if (chilean.length) return preferred(chilean);
-    }
     return preferred(fits);
   }
 
@@ -111,12 +107,17 @@
   /* The voice to speak `lang` with, or null for "leave u.voice unset": that is the only way to the system default,
      which on iOS is the Siri voice — a voice getVoices() never lists. */
   function resolve(voices, settings, lang) {
-    if ((settings?.voice === CHILE || neural(settings, lang)) && lang === 'es') {
+    if ((settings?.voice === CHILE || ['catalina','lorenzo'].includes(neural(settings, lang))) && lang === 'es') {
       const fits = list(voices, lang);
       const exact = fits.filter((v) => tag(v) === 'es-cl');
       if (exact.length) return forLang(exact, lang);
       const latam = fits.filter((v) => /^es-(?:419|ar|bo|co|cr|cu|do|ec|gt|hn|mx|ni|pa|pe|pr|py|sv|uy|ve)$/.test(tag(v)));
       return forLang(latam, lang) || forLang(fits, lang);
+    }
+    const cloud = neural(settings, lang);
+    if (cloud) {
+      const locale = cloud.split('-').slice(0,2).join('-').toLowerCase();
+      return forLang(list(voices, lang).filter(v => tag(v) === locale), lang) || forLang(voices, lang);
     }
     if (usesSite(settings?.voice, lang)) return forLang(voices, lang);
     const pick = settings?.voiceURI;
@@ -127,9 +128,15 @@
   // An explicit non-Chilean voice would override this locale request.
   function speechPlan(voices, settings, lang) {
     const fallback = resolve(voices, settings, lang);
-    if (lang === 'es' && (settings?.voice === CHILE || neural(settings, lang))) {
+    if (lang === 'es' && (settings?.voice === CHILE || ['catalina','lorenzo'].includes(neural(settings, lang)))) {
       if (fallback && tag(fallback) === 'es-cl') return { voice: fallback, lang: fallback.lang, fallback: null };
       return { voice: null, lang: 'es-CL', fallback };
+    }
+    const cloud = neural(settings, lang);
+    if (cloud) {
+      const locale = cloud.split('-').slice(0,2).join('-');
+      if (fallback && tag(fallback) === locale.toLowerCase()) return { voice: fallback, lang: fallback.lang, fallback: null };
+      return { voice: null, lang: locale, fallback };
     }
     return { voice: fallback, lang: fallback?.lang || langTag(voices, lang), fallback: null };
   }
