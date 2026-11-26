@@ -270,17 +270,23 @@
                 if (A.voice.usesSite(s.voice, s.target)) return;
                 const status = h('small', { class: 'muted', role: 'status' });
                 const sel = h('select', { class: 'select', 'aria-label': t('set.voice_system') });
-                let signature = null;
+                let signature = null, all = !!(s.voiceURI && A.voice.choices(A.voice.now()).some(v => v.voiceURI === s.voiceURI) && !A.voice.choices(A.voice.now(), s.target).some(v => v.voiceURI === s.voiceURI));
+                const showAll = h('input', { type: 'checkbox' });
+                showAll.checked = all;
+                const scope = h('label', { class: 'row gap small' }, showAll, t('set.voice_all'));
                 repaint = () => {
-                  const unique = A.voice.choices(A.voice.now(), s.target);
-                  const next = JSON.stringify(unique.map(v => [v.voiceURI, v.name, v.lang]));
+                  const detected = A.voice.now();
+                  const target = A.voice.choices(detected, s.target);
+                  const total = A.voice.choices(detected);
+                  const unique = A.voice.displayChoices(detected, all ? null : s.target);
+                  const next = JSON.stringify(unique.map(({voice:v,label}) => [v.voiceURI, label]));
                   const want = s.voiceURI || '';
                   if (next !== signature) {
                     signature = next;
                     sel.replaceChildren(h('option', { value: '' }, t('set.voice_default')));
                     if (unique.length) {
                       const group = h('optgroup', { label: t('set.voice_system') });
-                      for (const v of unique) group.append(h('option', { value: v.voiceURI }, `${v.name} — ${v.lang}`));
+                      for (const {voice:v,label} of unique) group.append(h('option', { value: v.voiceURI }, label));
                       sel.append(group);
                     }
                   }
@@ -288,11 +294,12 @@
                   if (sel.value !== want) sel.value = '';
                   const plan = A.voice.speechPlan(A.voice.now(), s, s.target);
                   const label = plan.voice ? `${plan.voice.name} — ${plan.voice.lang}` : t('set.voice_default');
-                  status.textContent = `${label} · ${t('set.voice_system')}: ${unique.length}`;
+                  status.textContent = `${label} · ${t('set.voice_counts', { target: target.length, total: total.length })}`;
                 };
                 repaint();
                 sel.addEventListener('change', () => { set({ voiceURI: sel.value }); repaint(); });
-                details.append(status, sel);
+                showAll.addEventListener('change', () => { all = showAll.checked; signature = null; repaint(); });
+                details.append(status, scope, sel);
                 if (s.target === 'es') details.append(h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
                 details.append(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': t('set.voice_refresh'), onclick: () => { A.voice.refresh(); signature = null; repaint(); } }, '↻ ', t('set.voice_refresh')));
               };
