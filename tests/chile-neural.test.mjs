@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { configured, ssml, chileSpeech } from '../src/sources/chile-speech.js';
-import { tts } from '../src/sources/voice.js';
+import { configured, ssml, chileSpeech, CLOUD_VOICES } from '../src/sources/chile-speech.js';
+import { tts, cloudStatus } from '../src/sources/voice.js';
 import { browser } from './helpers.mjs';
 function db() {
   const cache = new Map(), hits = new Map();
@@ -55,11 +55,42 @@ test('daily and monthly budgets refuse before provider request', async (t)=>{
   assert.equal(await chileSpeech(m,'hola','lorenzo'),null);
   assert.equal(f.mock.callCount(),0);
 });
-test('cloud mode only selects Azure for Spanish and falls back to Chilean device speech',()=>{
+test('cloud mode supports several languages and retains Chilean compatibility',()=>{
   const V=browser(['public/js/voice.js']).App.voice;
   const s={voice:'neural',neuralVoice:'lorenzo'};
-  assert.equal(V.neural(s,'es'),'lorenzo'); assert.equal(V.neural(s,'en'),'');
+  assert.equal(V.neural(s,'es'),'lorenzo'); assert.equal(V.neural(s,'en'),'en-US-JennyNeural'); assert.equal(V.neural(s,'eo'),'');
   assert.equal(V.neural({voice:'neural'},'es'),'catalina');
   const cl={lang:'es-CL',name:'Chile',voiceURI:'cl'};
   assert.equal(V.resolve([{lang:'es-ES',name:'Premium'},cl],s,'es'),cl);
+});
+
+test('client and server cloud catalogs match, SSML locale follows selected voice',()=>{
+  const V=browser(['public/js/voice.js']).App.voice;
+  for(const [lang,voices] of Object.entries(CLOUD_VOICES)) {
+    assert.deepEqual(Array.from(V.cloudChoices(lang),v=>v.id),Object.keys(voices));
+    for(const [id,name] of Object.entries(voices)) assert.ok(ssml('test',id,lang).includes('name="'+name+'"'));
+  }
+  assert.throws(()=>ssml('hello','en-US-JennyNeural','es'));
+  assert.match(ssml('hello','en-GB-SoniaNeural','en'),/xml:lang="en-GB"/);
+});
+test('multilingual cloud audio is cached separately and configuration status reveals no key',async(t)=>{
+  const e=env();let calls=0;
+  t.mock.method(globalThis,'fetch',async(url,opts)=>{
+    calls++;
+    assert.match(opts.body,/xml:lang="en-(US|GB)"/);
+    return new Response(new Uint8Array([73,68,51,1]),{headers:{'Content-Type':'audio/mpeg'}});
+  });
+  assert.equal((await ask(e,'en-US-JennyNeural','hello','en')).status,200);
+  assert.equal((await ask(e,'en-US-JennyNeural','hello','en')).status,200);
+  assert.equal((await ask(e,'en-GB-SoniaNeural','hello','en')).status,200);
+  assert.equal(calls,2);
+  assert.deepEqual(await cloudStatus(e).json(),{configured:true});
+  assert.deepEqual(await cloudStatus({}).json(),{configured:false});
+});
+test('native fallback follows the selected cloud region',()=>{
+  const V=browser(['public/js/voice.js']).App.voice;
+  const cl={name:'Chile',lang:'es-CL',voiceURI:'cl'};
+  const mx={name:'Mexico',lang:'es-MX',voiceURI:'mx'};
+  assert.equal(V.speechPlan([cl,mx],{voice:'neural',neuralVoice:'es-MX-DaliaNeural'},'es').voice,mx);
+  assert.equal(V.speechPlan([cl],{voice:'neural',neuralVoice:'es-MX-DaliaNeural'},'es').lang,'es-MX');
 });
