@@ -5,6 +5,10 @@
   const SITE = 'site';
   const DEVICE = 'system';
   const CHILE = 'chile';
+  const NEURAL = 'neural';
+  function neural(settings, lang) {
+    return settings?.voice === NEURAL && lang === 'es' ? (settings.neuralVoice === 'lorenzo' ? 'lorenzo' : 'catalina') : '';
+  }
 
   const ALIAS = { nb: ['nb', 'no', 'nn'], nn: ['nn', 'nb', 'no'], zh: ['zh-cn', 'cmn', 'zh'], prs: ['fa-af', 'prs', 'fa'], kmr: ['ku', 'kmr'], tl: ['fil', 'tl'], he: ['he', 'iw'], arz: ['ar-eg', 'ar'], apc: ['ar-lb', 'ar-sy', 'ar'], ary: ['ar-ma', 'ar'], yue: ['zh-hk', 'yue'], gsw: ['gsw', 'de-ch'], bs: ['bs', 'hr'] };
 
@@ -41,7 +45,7 @@
   /* The voice to speak `lang` with, or null for "leave u.voice unset": that is the only way to the system default,
      which on iOS is the Siri voice — a voice getVoices() never lists. */
   function resolve(voices, settings, lang) {
-    if (settings?.voice === CHILE && lang === 'es') {
+    if ((settings?.voice === CHILE || neural(settings, lang)) && lang === 'es') {
       const fits = list(voices, lang);
       const exact = fits.filter((v) => tag(v) === 'es-cl');
       if (exact.length) return forLang(exact, lang);
@@ -58,5 +62,5 @@
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, CHILE, usesSite, list, forLang, resolve, langTag, rate };
+  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, forLang, resolve, langTag, rate };
 })();
