@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { browser } from './helpers.mjs';
+const fresh=()=>{const S=browser(['public/js/store.js']).App.store;S.init({native:'zh',target:'es'});return S;};
+test('switching languages restores independent mode, voice and speed',()=>{
+  const S=fresh();
+  S.set({voice:'system',voiceURI:'mx',voiceRate:0.8});
+  S.activatePair('en');
+  assert.equal(S.settings.voice,'site');
+  assert.equal(S.settings.voiceURI,'');
+  S.set({voice:'neural',neuralVoice:'en-GB-SoniaNeural',voiceRate:1.1});
+  S.activatePair('es');
+  assert.equal(S.settings.voice,'system');
+  assert.equal(S.settings.voiceURI,'mx');
+  assert.equal(S.settings.voiceRate,0.8);
+  S.activatePair('en');
+  assert.equal(S.settings.neuralVoice,'en-GB-SoniaNeural');
+  assert.equal(S.settings.voiceRate,1.1);
+});
+test('pair preferences survive sync and switching',()=>{
+  const A=fresh(),B=fresh();
+  A.set({voice:'system',voiceURI:'mx'});
+  A.activatePair('en');
+  A.set({voice:'neural',neuralVoice:'en-US-GuyNeural'});
+  B.merge(JSON.parse(JSON.stringify(A.snapshot())),{preferRemoteSettings:true});
+  B.activatePair('es');
+  assert.equal(B.settings.voiceURI,'mx');
+  B.activatePair('en');
+  assert.equal(B.settings.neuralVoice,'en-US-GuyNeural');
+});
