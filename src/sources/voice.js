@@ -110,6 +110,10 @@ const answer = (v) => new Response(unb64(v.d), {
 });
 const none = () => new Response(JSON.stringify({ error: 'none' }), { status: 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' } });
 
+export function cloudStatus(env) {
+  return Response.json({ configured: configured(env) }, { headers: { 'Cache-Control': 'no-store' } });
+}
+
 async function neuralTts(env, key, text, voice, lang) {
   const unavailable = () => new Response(JSON.stringify({ error: 'none' }), { status: 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   if (!configured(env)) return unavailable();
