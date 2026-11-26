@@ -255,9 +255,16 @@
               const seg = A.segmented([
                 { value: 'site', label: t('set.voice_site') },
                 { value: 'system', label: t('set.voice_system') },
-                ...(s.target === 'es' ? [{ value: 'chile', label: t('set.voice_chile') }] : []),
-              ], s.voice === 'chile' && s.target === 'es' ? 'chile' : A.voice.usesSite(s.voice, s.target) ? 'site' : 'system', (v) => set({ voice: v }, true));
+                ...(s.target === 'es' ? [{ value: 'chile', label: t('set.voice_chile') }, { value: 'neural', label: t('set.voice_neural') }] : []),
+              ], s.target === 'es' && ['chile', 'neural'].includes(s.voice) ? s.voice : A.voice.usesSite(s.voice, s.target) ? 'site' : 'system', (v) => set({ voice: v }, true));
               const wrap = h('div', { class: 'voice-pick' }, seg);
+              if (s.voice === 'neural' && s.target === 'es') {
+                const sel = h('select', { class: 'select' }, [h('option', { value: 'catalina' }, 'Catalina — es-CL'), h('option', { value: 'lorenzo' }, 'Lorenzo — es-CL')]);
+                sel.value = A.voice.neural(s, 'es');
+                sel.addEventListener('change', () => set({ neuralVoice: sel.value }));
+                wrap.append(sel, h('small', { class: 'muted' }, t('set.voice_neural_hint')), h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak('Hola, ¿cómo estás? Vamos al supermercado a comprar palta y frutillas.', 'es') }, t('common.listen')));
+                return wrap;
+              }
               if (s.voice === 'chile' && s.target === 'es') {
                 const status = h('small', { class: 'muted' });
                 const paint = () => {
