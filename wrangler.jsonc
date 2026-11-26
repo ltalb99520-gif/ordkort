@@ -43,6 +43,8 @@
   //   npx wrangler secret put GEMINI_API_KEY     (aistudio.google.com/apikey: free, no billing)
   // Optional, paid per token, asked only when every free model is at its limit: npx wrangler secret put DEEPINFRA_API_KEY
   // Optional: npx wrangler secret put PIXABAY_KEY adds Pixabay to the picture search (src/sources/images.js)
+  // Optional Azure Chilean neural speech: add AZURE_SPEECH_KEY and AZURE_SPEECH_REGION as Worker secrets.
+  // Without both, cloud speech returns unavailable and the browser uses device speech.
   // Optional: npx wrangler secret put ADMIN_TOKEN lets the site's owner take down decks (src/decks/library.js)
   "vars": {
     "AI_PER_HOUR": "40",
@@ -52,7 +54,7 @@
     // today's budget is spent (src/core/limits.js)
     "AI_SHARED_TIMES": "5",
     // Tokens a day the paid fallback (DEEPINFRA_API_KEY) may spend; about $0.10–0.40 a million. 0 turns it off
-    "PAID_DAILY_TOKENS": "1000000",
+    "PAID_DAILY_TOKENS": "0",
     // AI_MODELS may set the order of the models, e.g. "cerebras:gpt-oss-120b,groq:openai/gpt-oss-120b" (src/ai/groq.js)
     // How many lists of words the cron may generate a day for the bank of ready decks (src/ai/warm.js).
     // Groq's free plan gives each model 200,000 tokens a day, about 100–150 answers for the whole site: keep this small
@@ -61,8 +63,8 @@
     // Room in the database a day (src/core/limits.js takeStore): sync copies and their files, links, library decks,
     // voices. Per person, and for the whole site. D1 holds 500 MB on the free plan, 10 GB on the paid one:
     // on the free plan lower STORE_SITE_DAY_MB, or the database can still fill in a few days of an attack
-    "STORE_PER_DAY_MB": "100",
-    "STORE_SITE_DAY_MB": "1000",
+    "STORE_PER_DAY_MB": "10",
+    "STORE_SITE_DAY_MB": "20",
     // Requests to the moderating models when decks are published to the library (src/decks/library.js)
     "GUARD_PER_DAY": "60",
     "GUARD_SITE_DAY": "400",
