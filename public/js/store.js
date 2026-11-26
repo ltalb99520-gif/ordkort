@@ -135,11 +135,32 @@
     if (Object.keys(patch).some((k) => !DEVICE_ONLY.includes(k))) state.settings.u = now();
     save();
   }
+  // Archive a language without discarding cards, review history or media.
+  // Visibility is merged independently of card edits, so an older device cannot resurrect it.
+  function archivePair(target) {
+    if (target === state.settings.target) return false;
+    const p = state.pairs[`${target}:${state.settings.native}`];
+    if (!p || p.visibility?.hidden) return false;
+    p.visibility = { hidden: true, u: Math.max(now(), (p.visibility?.u || 0) + 1) };
+    save();
+    return true;
+  }
+
+  function activatePair(target) {
+    const key = `${target}:${state.settings.native}`;
+    const p = (state.pairs[key] ||= { decks: {}, cards: {} });
+    if (p.visibility?.hidden) p.visibility = { hidden: false, u: Math.max(now(), p.visibility.u + 1) };
+    state.settings.target = target;
+    state.settings.u = now();
+    save();
+  }
+
   // every language learnt with the current native one, with how many of its cards wait for a review now
   function pairs() {
     const native = state.settings.native;
     const t = now();
     return Object.entries(state.pairs)
+      .filter(([k, p]) => !p.visibility?.hidden || k === pairKey())
       .map(([k, p]) => {
         const [target, nat] = k.split(':');
         const all = Object.values(p.cards);
@@ -621,6 +642,11 @@
       const L = (state.pairs[key] ||= { decks: {}, cards: {} });
       L.del ||= {};
       const R = remote.pairs[key] || {};
+      const lv = L.visibility, rv = R.visibility;
+      if (rv && (!lv || rv.u > lv.u || (rv.u === lv.u && rv.hidden && !lv.hidden))) {
+        L.visibility = { hidden: !!rv.hidden, u: rv.u };
+        changed = true;
+      } else if (lv && (!rv || lv.u > rv.u || (lv.u === rv.u && lv.hidden && !rv.hidden))) ahead = true;
       const rdel = R.del || {};
       for (const [id, t] of Object.entries(rdel)) if (!(L.del[id] >= t)) { L.del[id] = t; changed = true; }
       for (const [id, t] of Object.entries(L.del)) if (!(rdel[id] >= t)) ahead = true;
@@ -695,7 +721,7 @@
   }
 
   A.store = {
-    open, load, save, init, set, pairs, onChange, snapshot, merge,
+    open, load, save, init, set, pairs, archivePair, activatePair, onChange, snapshot, merge,
     get allPairs() { return state.pairs; }, // every language pair's decks and cards, to read
     get where() { return idb ? 'indexeddb' : 'localstorage'; },
     flushed: async () => { while (writing) await new Promise((r) => setTimeout(r, 5)); },
