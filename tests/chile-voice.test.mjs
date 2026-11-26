@@ -31,7 +31,7 @@ test('Chilean mode bypasses site audio only for Spanish', () => {
 });
 test('Manual voice selection and system defaults remain available', () => {
   assert.equal(V.resolve([es, cl], {voice:'system', voiceURI:'es-ES'}, 'es'), es);
-  assert.equal(V.resolve([es, en], {voice:'system', voiceURI:'es-ES'}, 'en'), null);
+  assert.equal(V.resolve([es, en], {voice:'system', voiceURI:'es-ES'}, 'en'), es);
   assert.equal(V.resolve([es, cl], {voice:'system'}, 'es'), null);
 });
 test('Device speech rate validates stored settings', () => {
