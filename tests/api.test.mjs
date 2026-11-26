@@ -20,7 +20,7 @@ before(async () => {
   harness = createTestHarness({
     root: fileURLToPath(ROOT),
     // test secrets replace .dev.vars, so a real Groq key is never used here
-    workers: [{ config: withoutAI(), secrets: { GROQ_API_KEY: 'test-key-not-used', IP_SALT: 'test', STORE_PER_DAY_MB: '25' } }],
+    workers: [{ config: withoutAI(), secrets: { GROQ_API_KEY: 'test-key-not-used', IP_SALT: 'test', STORE_PER_DAY_MB: '25', STORE_SITE_DAY_MB: '100' } }],
   });
   await harness.listen();
 });

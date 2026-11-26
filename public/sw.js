@@ -16,6 +16,7 @@ const CORE = [
   '/icons/icon-192.png',
 ];
 const TIMEOUT = 3500;
+const VOICE_CACHE = 'ordkort-voice-v1'; // disposable offline audio, retained across app builds
 const REMIND = 'ordkort-remind'; // the reminder plan the page keeps (js/remind.js): not the site's copy // on a very slow network fall back to the cached copy
 
 self.addEventListener('install', (e) => {
@@ -25,7 +26,7 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys()
-    .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== REMIND).map((k) => caches.delete(k))))
+    .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== REMIND && k !== VOICE_CACHE).map((k) => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -34,7 +35,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   // ?fresh — the app asking the server for its current version: never from the cache
-  if (url.origin !== location.origin || url.pathname.startsWith('/api/') || url.searchParams.has('fresh')) return;
+  if (url.origin !== location.origin || url.pathname.startsWith('/api/') || url.pathname.startsWith('/__ordkort_voice/') || url.searchParams.has('fresh')) return;
 
   // fonts and icons never change: cache first
   if (url.pathname.startsWith('/fonts/') || url.pathname.startsWith('/icons/')) {
