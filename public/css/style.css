@@ -1354,7 +1354,7 @@ dialog.modal::backdrop { background: rgba(20, 16, 10, 0.45); backdrop-filter: bl
 .set-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .set-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 @media (max-width: 959px) {
-  .set-grid { grid-template-columns: 1fr; }
+  .set-grid { grid-template-columns: minmax(0, 1fr); }
   .set-col { display: contents; }
   .set-grid .set-card { order: var(--o, 0); }
 }
@@ -1372,7 +1372,10 @@ dialog.modal::backdrop { background: rgba(20, 16, 10, 0.45); backdrop-filter: bl
 .about-links { margin: 8px 0 0; padding-inline-start: 18px; font-size: 14px; color: var(--ink-2); }
 .about-links li { margin-bottom: 6px; }
 .fsrs-ctl { display: grid; gap: 6px; justify-items: end; text-align: end; max-width: 260px; }
-.voice-pick { display: grid; gap: 8px; justify-items: stretch; width: max-content; max-width: 100%; }
+.voice-pick { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; justify-items: stretch; width: max-content; max-width: 100%; min-width: 0; }
+.voice-pick .seg { min-width: 0; max-width: 100%; }
+.voice-pick .seg button { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.voice-pick small { min-width: 0; overflow-wrap: anywhere; }
 .voice-pick .select { width: 100%; min-width: 0; }
 .lib-tools { margin: 6px 0 18px; align-items: center; }
 .lib-tools .input { flex: 1 1 16em; min-width: 0; }
@@ -1608,7 +1611,11 @@ dialog.modal::backdrop { background: rgba(20, 16, 10, 0.45); backdrop-filter: bl
   .tr-input, .tr-src-view, .tr-output { font-size: 19px; }
   .tr-input { min-height: 110px; }
   .set-row { flex-direction: column; align-items: stretch; gap: 10px; }
-  .set-ctl { max-width: none; justify-content: flex-start; }
+  .set-card, .set-row, .set-label { min-width: 0; }
+  .set-ctl { min-width: 0; max-width: 100%; justify-content: flex-start; }
+  .voice-pick { width: 100%; }
+  .voice-pick .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .voice-pick .seg button { padding-inline: 8px; min-height: 44px; text-align: center; }
   .set-ctl .select, .set-ctl .input { width: 100%; min-width: 0; }
   .form-grid { grid-template-columns: 1fr; }
   .field, .field.half, .fill-row { grid-column: span 1; }
