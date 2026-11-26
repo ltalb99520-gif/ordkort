@@ -53,6 +53,22 @@
     });
   }
 
+  function searchChoices(entries, query) {
+    const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/_/g, '-');
+    const terms = normalize(query).trim().split(/\s+/).filter(Boolean);
+    return entries.filter(({voice, label}) => {
+      const haystack = normalize([label, voice.name, voice.lang, voice.voiceURI].join(' '));
+      return terms.every(term => haystack.includes(term));
+    });
+  }
+
+  function voiceChanges(before, after) {
+    const old = new Set(choices(before).map(v => v.voiceURI));
+    const current = choices(after);
+    const ids = new Set(current.map(v => v.voiceURI));
+    return { before: old.size, after: ids.size, added: current.filter(v => !old.has(v.voiceURI)), removed: [...old].filter(id => !ids.has(id)).length };
+  }
+
   function forLang(voices, lang) {
     const fits = list(voices, lang);
     const preferred = (xs) => xs.find((x) => /natural|neural|online|google|enhanced|premium|siri/i.test(x.name)) || xs[0] || null;
@@ -103,5 +119,5 @@
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, choices, displayChoices, forLang, resolve, speechPlan, langTag, rate };
+  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, usesSite, list, choices, displayChoices, searchChoices, voiceChanges, forLang, resolve, speechPlan, langTag, rate };
 })();
