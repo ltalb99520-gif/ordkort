@@ -20,7 +20,12 @@
 
   function forLang(voices, lang) {
     const fits = list(voices, lang);
-    return fits.find((x) => /natural|neural|online|google|enhanced|premium|siri/i.test(x.name)) || fits[0] || null;
+    const preferred = (xs) => xs.find((x) => /natural|neural|online|google|enhanced|premium|siri/i.test(x.name)) || xs[0] || null;
+    if (lang === 'es') {
+      const chilean = fits.filter((v) => tag(v) === 'es-cl');
+      if (chilean.length) return preferred(chilean);
+    }
+    return preferred(fits);
   }
 
   function usesSite(voice) {
