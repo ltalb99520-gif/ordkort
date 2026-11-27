@@ -820,6 +820,7 @@ globalThis.App.i18nData.nb = {
   'set.cloud_unknown': "Ukjent skyoppsett.",
   'set.cloud_unsupported': "Ingen skystemmer i katalogen for dette språket.",
   'set.voice_neural_hint': "Når Azure er konfigurert, sendes spansk tekst dit. Ellers brukes enhetens stemme.",
+  'set.gemini_hint': "Gemini sender teksten til Google. Aksent er ikke garantert. Bruk et gratis API-prosjekt uten fakturering.",
   'set.voice_neural_fallback': "Skystemmen er utilgjengelig; bruker enhetens stemme.",
   'about.voice_h': "Stemmen på kortene",
   'about.voice_p': "Et kort fra Anki spiller sitt eget opptak. Ellers leter serveren etter et opptak av ordet fra en morsmålsbruker på Wiktionary (Lingua Libre og andre på Wikimedia Commons, med åpne lisenser), eller lager et med en syntetisk stemme; bare teksten og språket sendes dit, og hvert ord hentes én gang for alle. Du kan bytte til enhetens egen stemme i innstillingene.",

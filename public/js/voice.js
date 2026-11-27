@@ -17,7 +17,11 @@
     de: ['de-DE-KatjaNeural','de-DE-ConradNeural'],
     it: ['it-IT-ElsaNeural','it-IT-DiegoNeural'],
   });
-  function cloudChoices(lang) {
+  const GEMINI_VOICES = ['Kore','Puck','Zephyr','Charon','Aoede','Sulafat'];
+  const GEMINI_LOCALES = {es:['es-CL','es-MX','es-ES'],en:['en-US','en-GB'],zh:['zh-CN'],fr:['fr-FR','fr-CA'],pt:['pt-BR','pt-PT'],ja:['ja-JP'],ko:['ko-KR'],de:['de-DE'],it:['it-IT']};
+  function provider(settings) { return settings?.neuralVoice?.startsWith('gemini:') ? 'gemini' : 'azure'; }
+  function cloudChoices(lang, source = 'azure') {
+    if (source === 'gemini') return (Object.hasOwn(GEMINI_LOCALES,lang) ? GEMINI_LOCALES[lang] : []).flatMap(locale => GEMINI_VOICES.map(voice => ({id:'gemini:'+locale+':'+voice,label:voice+' — '+locale})));
     return (Object.hasOwn(CLOUD, lang) ? CLOUD[lang] : []).map(id => {
       const full = id === 'catalina' ? 'es-CL-CatalinaNeural' : id === 'lorenzo' ? 'es-CL-LorenzoNeural' : id;
       const [language, region, name] = full.split('-');
@@ -26,7 +30,7 @@
   }
   function neural(settings, lang) {
     if (settings?.voice !== NEURAL) return '';
-    const options = cloudChoices(lang);
+    const options = cloudChoices(lang, provider(settings));
     return options.find(v => v.id === settings.neuralVoice)?.id || options[0]?.id || '';
   }
 
@@ -116,7 +120,7 @@
     }
     const cloud = neural(settings, lang);
     if (cloud) {
-      const locale = cloud.split('-').slice(0,2).join('-').toLowerCase();
+      const locale = (cloud.startsWith('gemini:') ? cloud.split(':')[1] : cloud.split('-').slice(0,2).join('-')).toLowerCase();
       return forLang(list(voices, lang).filter(v => tag(v) === locale), lang) || forLang(voices, lang);
     }
     if (usesSite(settings?.voice, lang)) return forLang(voices, lang);
@@ -134,7 +138,7 @@
     }
     const cloud = neural(settings, lang);
     if (cloud) {
-      const locale = cloud.split('-').slice(0,2).join('-');
+      const locale = (cloud.startsWith('gemini:') ? cloud.split(':')[1] : cloud.split('-').slice(0,2).join('-'));
       if (fallback && tag(fallback) === locale.toLowerCase()) return { voice: fallback, lang: fallback.lang, fallback: null };
       return { voice: null, lang: locale, fallback };
     }
@@ -146,5 +150,5 @@
     return (v && v.lang) || lang;
   }
 
-  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, cloudChoices, usesSite, list, choices, displayChoices, searchChoices, voiceChanges, forLang, resolve, speechPlan, langTag, rate };
+  A.voice = { SITE, DEVICE, CHILE, NEURAL, neural, cloudChoices, provider, usesSite, list, choices, displayChoices, searchChoices, voiceChanges, forLang, resolve, speechPlan, langTag, rate };
 })();

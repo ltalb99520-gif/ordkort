@@ -261,15 +261,24 @@
                 repaint = () => {};
                 details.replaceChildren();
                 if (s.voice === 'neural') {
-                  const sel = h('select', { class: 'select', 'aria-label': t('set.voice_neural') }, A.voice.cloudChoices(s.target).map(v => h('option', { value: v.id }, v.label)));
+                  const provider = A.voice.provider(s);
+                  const providerSelect = h('select', {class:'select','aria-label':'Cloud provider'}, [h('option',{value:'azure'},'Microsoft Azure'),h('option',{value:'gemini'},'Google Gemini')]);
+                  providerSelect.value = provider;
+                  providerSelect.addEventListener('change', () => {
+                    const options = A.voice.cloudChoices(s.target, providerSelect.value);
+                    if (options.length) { set({neuralVoice:options[0].id}); draw(); }
+                    else providerSelect.value = provider;
+                  });
+                  details.append(providerSelect);
+                  const sel = h('select', { class: 'select', 'aria-label': t('set.voice_neural') }, A.voice.cloudChoices(s.target, provider).map(v => h('option', { value: v.id }, v.label)));
                   sel.value = A.voice.neural(s, s.target);
-                  sel.disabled = !A.voice.cloudChoices(s.target).length;
+                  sel.disabled = !A.voice.cloudChoices(s.target, provider).length;
                   const cloudStatus = h('small', { class: 'muted', role: 'status' }, t('set.cloud_checking'));
-                  A.ai.call('tts-status').then(async r => { if (!r.ok) throw Error('status'); const data = await r.json(); cloudStatus.textContent = t(data.configured ? 'set.cloud_configured' : 'set.cloud_unconfigured'); }).catch(() => { cloudStatus.textContent = t('set.cloud_unknown'); });
+                  A.ai.call('tts-status?provider='+provider).then(async r => { if (!r.ok) throw Error('status'); const data = await r.json(); cloudStatus.textContent = t(data.configured ? 'set.cloud_configured' : 'set.cloud_unconfigured'); }).catch(() => { cloudStatus.textContent = t('set.cloud_unknown'); });
                   details.append(cloudStatus);
                   if (sel.disabled) details.append(h('small', { class: 'muted' }, t('set.cloud_unsupported')));
                   sel.addEventListener('change', () => set({ neuralVoice: sel.value }));
-                  details.append(sel, h('small', { class: 'muted' }, t('set.voice_neural_hint')), h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak(A.langs.get(s.target).hello, s.target) }, t('common.listen')));
+                  details.append(sel, h('small', { class: 'muted' }, t(provider === 'gemini' ? 'set.gemini_hint' : 'set.voice_neural_hint')), h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: () => A.speak(A.langs.get(s.target).hello, s.target) }, t('common.listen')));
                   return;
                 }
                 if (A.voice.usesSite(s.voice, s.target)) return;

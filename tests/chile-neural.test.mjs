@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { configured, ssml, chileSpeech, CLOUD_VOICES } from '../src/sources/chile-speech.js';
+import { geminiSpeech, GEMINI_MODEL, GEMINI_LOCALES, GEMINI_VOICES } from '../src/sources/gemini-speech.js';
 import { tts, cloudStatus } from '../src/sources/voice.js';
 import { browser } from './helpers.mjs';
 function db() {
@@ -93,4 +94,47 @@ test('native fallback follows the selected cloud region',()=>{
   const mx={name:'Mexico',lang:'es-MX',voiceURI:'mx'};
   assert.equal(V.speechPlan([cl,mx],{voice:'neural',neuralVoice:'es-MX-DaliaNeural'},'es').voice,mx);
   assert.equal(V.speechPlan([cl],{voice:'neural',neuralVoice:'es-MX-DaliaNeural'},'es').lang,'es-MX');
+});
+
+test('Gemini choices agree with server locale and voice catalog',()=>{
+  const V=browser(['public/js/voice.js']).App.voice;
+  for(const [lang,locales] of Object.entries(GEMINI_LOCALES)) {
+    assert.deepEqual(Array.from(V.cloudChoices(lang,'gemini'),v=>v.id),locales.flatMap(l=>GEMINI_VOICES.map(v=>'gemini:'+l+':'+v)));
+  }
+  const settings={voice:'neural',neuralVoice:'gemini:es-CL:Kore'};
+  assert.equal(V.provider(settings),'gemini');
+  assert.equal(V.neural(settings,'es'),'gemini:es-CL:Kore');
+  assert.equal(V.speechPlan([],settings,'es').lang,'es-CL');
+});
+test('Gemini is opt-in, validates locale and caps provider calls',async(t)=>{
+  const e=env(), id='gemini:es-CL:Kore';
+  assert.equal((await ask(e,id,'hola')).status,404);
+  assert.deepEqual(await cloudStatus(e,'gemini').json(),{configured:false});
+  e.GEMINI_TTS_API_KEY='test-gemini-key';
+  e.GEMINI_TTS_DAILY_REQUESTS=1;
+  const wav=new Uint8Array(46);wav.set(new TextEncoder().encode('RIFF'),0);wav.set(new TextEncoder().encode('WAVE'),8);
+  const f=t.mock.method(globalThis,'fetch',async(url,opts)=>{
+    assert.equal(url,'https://generativelanguage.googleapis.com/v1beta/interactions');
+    assert.equal(opts.headers['x-goog-api-key'],'test-gemini-key');
+    const body=JSON.parse(opts.body);
+    assert.equal(body.model,GEMINI_MODEL);assert.equal(body.store,false);
+    assert.equal(body.input[0].content[0].text,'hola');
+    assert.match(body.input[0].content[0].annotations[0].style,/Chilean Spanish/);
+    assert.equal(body.generation_config.speech_config[0].voice,'Kore');
+    return Response.json({steps:[{type:'model_output',content:[{type:'audio',data:btoa(String.fromCharCode(...wav))}]}]});
+  });
+  const res=await ask(e,id,'hola');
+  assert.equal(res.status,200);assert.equal(res.headers.get('Content-Type'),'audio/wav');
+  assert.match(decodeURIComponent(res.headers.get('X-Voice-By')),/Gemini TTS/);
+  assert.equal((await ask(e,id,'hola')).status,200);
+  assert.equal((await ask(e,id,'adios')).status,404);
+  assert.equal(f.mock.callCount(),1);
+  await assert.rejects(ask(e,id,'hello','en'),err=>err.status===400);
+  await assert.rejects(ask(e,'gemini:es-CL:Unknown','hola'),err=>err.status===400);
+  assert.deepEqual(await cloudStatus(e,'gemini').json(),{configured:true});
+});
+test('Gemini errors and invalid audio return no result',async(t)=>{
+  const e={...env(),GEMINI_TTS_API_KEY:'test'};
+  t.mock.method(globalThis,'fetch',async()=>Response.json({steps:[{type:'model_output',content:[{type:'audio',data:'AAAA'}]}]}));
+  assert.equal(await geminiSpeech(e,'hola','gemini:es-CL:Kore','es'),null);
 });

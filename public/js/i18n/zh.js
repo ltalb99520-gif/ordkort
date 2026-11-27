@@ -816,6 +816,7 @@ globalThis.App.i18nData.zh = {
   'set.cloud_unknown': "无法确认云端配置。",
   'set.cloud_unsupported': "当前语音目录没有此语言的云端语音。",
   'set.voice_neural_hint': "配置后将西语文本发送给 Azure；不可用时改用设备语音。",
+  'set.gemini_hint': "Gemini 会将朗读文本发送给 Google。口音通过指令指定，实际效果需试听。请使用未开通计费的免费 API 项目。",
   'set.voice_neural_fallback': "云端语音不可用，改用设备语音。",
   'about.voice_h': "卡片的语音",
   'about.voice_p': "来自 Anki 的卡片会播放自带的录音。否则服务器会在维基词典上查找母语者的单词录音（维基共享资源上的 Lingua Libre 等，采用开放许可），或用合成语音朗读；只发送文本和语言，而且每个单词对所有人只请求一次。你可以在设置中改用设备自带的语音。",

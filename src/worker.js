@@ -72,7 +72,7 @@ async function route(request, env, url) {
     if (m === 'POST' && POST[name] && !id) return await POST[name](request, env, key);
     if (m === 'GET' && name === 'limits') return await api.limits(request, env, key);
     if (m === 'GET' && name === 'img' && !id) return await images.proxy(request, env, key);
-    if (m === 'GET' && name === 'tts-status' && !id) return voice.cloudStatus(env);
+    if (m === 'GET' && name === 'tts-status' && !id) return voice.cloudStatus(env, url.searchParams.get('provider'));
     if (m === 'GET' && name === 'tts' && !id) return await voice.tts(request, env, key);
 
     if (name === 'share') {
