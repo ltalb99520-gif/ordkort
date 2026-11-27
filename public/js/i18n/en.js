@@ -820,6 +820,7 @@ globalThis.App.i18nData.en = {
   'set.cloud_unknown': "Cloud configuration unknown.",
   'set.cloud_unsupported': "No cloud voices in the current catalog for this language.",
   'set.voice_neural_hint': "Spanish text is sent to Azure when configured. If unavailable, device speech is used.",
+  'set.gemini_hint': "Gemini sends the spoken text to Google. Accent is requested, not guaranteed. Use a free-tier API project without billing.",
   'set.voice_neural_fallback': "Cloud voice unavailable; using device speech.",
   'about.voice_h': "The voice of the cards",
   'about.voice_p': "A card from Anki plays its own recording. Otherwise the server looks for a native speaker's recording of the word on Wiktionary (Lingua Libre and others on Wikimedia Commons, under free licences), or makes one with a synthetic voice; only the text and its language go there, and each word is fetched once for everybody. You can switch to your device's own voice in Settings.",
